@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34330.188
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "INTEL-API", "INTEL-API.csproj", "{D6CE12EC-B4AB-4F9A-950E-75ED88B1E121}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C7215D42-E013-4FCE-8B8A-FF99048B016C} = {C7215D42-E013-4FCE-8B8A-FF99048B016C}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ViewModels", "..\ViewModels\ViewModels.csproj", "{C7215D42-E013-4FCE-8B8A-FF99048B016C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D6CE12EC-B4AB-4F9A-950E-75ED88B1E121}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D6CE12EC-B4AB-4F9A-950E-75ED88B1E121}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D6CE12EC-B4AB-4F9A-950E-75ED88B1E121}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D6CE12EC-B4AB-4F9A-950E-75ED88B1E121}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C7215D42-E013-4FCE-8B8A-FF99048B016C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C7215D42-E013-4FCE-8B8A-FF99048B016C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C7215D42-E013-4FCE-8B8A-FF99048B016C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C7215D42-E013-4FCE-8B8A-FF99048B016C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7197B5F6-2A61-43CB-BD1A-C5539665FCA6}
+	EndGlobalSection
+EndGlobal

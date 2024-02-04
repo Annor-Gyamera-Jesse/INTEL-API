@@ -1,0 +1,6 @@
+@INTEL_API_HostAddress = http://localhost:5264
+
+GET {{INTEL_API_HostAddress}}/User/
+Accept: application/json
+
+###
