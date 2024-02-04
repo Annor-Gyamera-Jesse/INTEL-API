@@ -305,7 +305,7 @@ namespace INTEL_API.Controllers
             }
         }
 
-        // Endpoint to get all classes
+        // Endpoint to get all class
         [HttpGet("Class")]
         public async Task<IActionResult> GetClass()
         {
