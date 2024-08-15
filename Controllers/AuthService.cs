@@ -28,7 +28,7 @@ namespace INTEL_API.Controllers
 
                 var usersWithRoles = new List<User>();
                 using (var command = new SqlCommand("SELECT ur.UserRoleID, u.UserID, u.UserName, u.Password, ur.RoleName, ur.Enable " +
-                                                    "FROM SchoolManagement.UserRoles ur " +
+                                                    "FROM SchoolManagement.MobileAppRoles ur " +
                                                     "JOIN SchoolManagement.Users u ON ur.UserID = u.UserID", connection))
                 using (var reader = await command.ExecuteReaderAsync())
                 {
@@ -41,14 +41,14 @@ namespace INTEL_API.Controllers
                             var user = new User
                             {
                                 UserID = reader.GetInt32(1),
-                                UserName = reader.GetString(2),
-                                Password = reader.GetString(3),
+                                UserName = reader.IsDBNull(2) ? string.Empty : reader.GetString(2), // Handle NULL
+                                Password = reader.IsDBNull(3) ? string.Empty : reader.GetString(3), // Handle NULL
                                 Roles = new List<UserRole>()
                             };
                             user.Roles.Add(new UserRole
                             {
                                 UserRoleID = reader.GetInt32(0),
-                                RoleName = reader.GetString(4),
+                                RoleName = reader.IsDBNull(4) ? string.Empty : reader.GetString(4), // Handle NULL
                                 Enable = reader.GetBoolean(5)
                             });
                             usersWithRoles.Add(user);
@@ -58,7 +58,7 @@ namespace INTEL_API.Controllers
                             existingUser.Roles.Add(new UserRole
                             {
                                 UserRoleID = reader.GetInt32(0),
-                                RoleName = reader.GetString(4),
+                                RoleName = reader.IsDBNull(4) ? string.Empty : reader.GetString(4), // Handle NULL
                                 Enable = reader.GetBoolean(5)
                             });
                         }
@@ -79,19 +79,20 @@ namespace INTEL_API.Controllers
                 await connection.OpenAsync();
 
                 var userRoles = new List<UserRole>();
-                using (var command = new SqlCommand("SELECT UserRoleID, RoleName, Enable FROM SchoolManagement.UserRoles WHERE UserID = @UserId", connection))
+                using (var command = new SqlCommand("SELECT UserRoleID, RoleName, Enable FROM SchoolManagement.MobileAppRoles WHERE UserID = @UserId", connection))
                 {
                     command.Parameters.AddWithValue("@UserId", userId);
                     using (var reader = await command.ExecuteReaderAsync())
                     {
                         while (await reader.ReadAsync())
                         {
-                            userRoles.Add(new UserRole
+                            var userRole = new UserRole
                             {
                                 UserRoleID = reader.GetInt32(0),
-                                RoleName = reader.GetString(1),
+                                RoleName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1), // Handle NULL value for RoleName
                                 Enable = reader.GetBoolean(2)
-                            });
+                            };
+                            userRoles.Add(userRole);
                         }
                     }
                 }
@@ -125,7 +126,7 @@ namespace INTEL_API.Controllers
                             StudentAddress = reader.GetString(5),
                             StudentPhoneNumber = reader.GetString(6),
                             StudentEmail = reader.GetString(7),
-                            ImageData = (byte[])reader.GetValue(8),
+                            ImageData = reader.IsDBNull(8) ? null : (byte[])reader.GetValue(8),
                             ClassID = reader.GetString(9),
                             GuardianFullName = reader.GetString(10),
                             GuardianGender = reader.GetString(11)[0],
@@ -135,7 +136,6 @@ namespace INTEL_API.Controllers
                             GuardianFirstContact = reader.GetString(15),
                             GuardianSecondContact = reader.GetString(16),
                             EnableSwitch = reader.GetBoolean(17)
-
                         };
                         students.Add(student);
                     }
