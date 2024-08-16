@@ -17,6 +17,72 @@ namespace INTEL_API.Controllers
             _configuration = configuration;
         }
 
+        // Login endpoint
+        [HttpPost("login")]
+        public IActionResult Login([FromBody] User request)
+        {
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                connection.Open();
+
+                // Check if the user exists
+                string query = "SELECT UserID, UserName, Password FROM SchoolManagement.Users WHERE UserName = @UserName";
+                SqlCommand cmd = new SqlCommand(query, connection);
+                cmd.Parameters.AddWithValue("@UserName", request.UserName);
+
+                SqlDataReader reader = cmd.ExecuteReader();
+                if (reader.Read())
+                {
+                    int userId = (int)reader["UserID"];
+                    string storedPassword = reader["Password"].ToString();
+
+                    if (storedPassword != request.Password)
+                    {
+                        return Unauthorized(new LoginResponse { IsAuthorized = false, Message = "Invalid credentials." });
+                    }
+
+                    reader.Close();
+
+                    // Check the user's roles and if they are enabled
+                    query = "SELECT RoleName, Enable, ClassID, MenuItem, CategoryName FROM SchoolManagement.MobileAppRoles WHERE UserID = @UserID";
+                    cmd = new SqlCommand(query, connection);
+                    cmd.Parameters.AddWithValue("@UserID", userId);
+
+                    reader = cmd.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        string roleName = reader["RoleName"].ToString();
+                        bool isEnabled = (bool)reader["Enable"];
+                        string classID = reader["ClassID"].ToString();
+                        string menuItem = reader["MenuItem"].ToString();
+                        string categoryName = reader["CategoryName"].ToString();
+
+                        if (isEnabled)
+                        {
+                            return Ok(new LoginResponse
+                            {
+                                IsAuthorized = true,
+                                UserId = userId,  // Include UserId in the response
+                                UserName = request.UserName,  // Include UserName in the response
+                                Role = roleName,
+                                ClassID = classID,
+                                MenuItem = menuItem,
+                                CategoryName = categoryName,
+                                Message = "Login successful."
+                            });
+                        }
+                    }
+
+                    return Unauthorized(new LoginResponse { IsAuthorized = false, Message = "User is not enabled." });
+                }
+                else
+                {
+                    return Unauthorized(new LoginResponse { IsAuthorized = false, Message = "User does not exist." });
+                }
+            }
+        }
+
         // Endpoint to get users with roles
         [HttpGet("UsersWithRoles")]
         public async Task<IActionResult> GetUsersWithRoles()
