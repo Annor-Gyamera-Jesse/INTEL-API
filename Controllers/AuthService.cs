@@ -167,6 +167,89 @@ namespace INTEL_API.Controllers
             }
         }
 
+        //Get Users with their userid to determain their the specific user menu
+        [HttpGet("MenuItems/{userId}")]
+        public async Task<IActionResult> GetMenuItems(int userId)
+        {
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (SqlConnection connection = new SqlConnection(connectionString))
+            {
+                await connection.OpenAsync();
+
+                // Updated query to join MobileAppRoles with MobileAppMenuDisplay and filter by Enable
+                string query = @"
+            SELECT DISTINCT mad.CategoryName, mad.MenuItem
+            FROM SchoolManagement.MobileAppRoles mar
+            JOIN SchoolManagement.MobileAppMenuDisplay mad ON mar.MenuItem = mad.MenuItem
+            WHERE mar.UserID = @UserID AND mar.Enable = 1";
+
+                SqlCommand command = new SqlCommand(query, connection);
+                command.Parameters.AddWithValue("@UserID", userId);
+
+                var menuItems = new List<MenuItem>();
+                using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                {
+                    while (await reader.ReadAsync())
+                    {
+                        var categoryName = reader["CategoryName"].ToString();
+                        var menuItemName = reader["MenuItem"].ToString();
+
+                        menuItems.Add(new MenuItem
+                        {
+                            CategoryName = categoryName,
+                            MenuItemName = menuItemName
+                        });
+                    }
+                }
+
+                return Ok(menuItems);
+            }
+        }
+
+        [HttpPost("postLessonNote")]
+        public async Task<IActionResult> PostLessonNote([FromBody] LessonNote lessonNote)
+        {
+            if (lessonNote == null)
+            {
+                return BadRequest("Invalid lesson note data.");
+            }
+
+            var connectionString = _configuration.GetConnectionString("DefaultConnection");
+
+            using (var connection = new SqlConnection(connectionString))
+            {
+                var query = @"
+            INSERT INTO SchoolManagement.lessonnotes 
+            (UserId, SchoolCourse, Topic, OBJECTIVES, TLMTLA, INTRODUCTION, COREPOINTS, EVALUATIONREMARKS, Status)
+            VALUES 
+            (@UserId, @SchoolCourse, @Topic, @OBJECTIVES, @TLMTLA, @INTRODUCTION, @COREPOINTS, @EVALUATIONREMARKS, @Status)";
+
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@UserId", lessonNote.UserId);
+                    command.Parameters.AddWithValue("@SchoolCourse", lessonNote.SchoolCourse);
+                    command.Parameters.AddWithValue("@Topic", lessonNote.Topic);
+                    command.Parameters.AddWithValue("@OBJECTIVES", lessonNote.OBJECTIVES);
+                    command.Parameters.AddWithValue("@TLMTLA", lessonNote.TLMTLA);
+                    command.Parameters.AddWithValue("@INTRODUCTION", lessonNote.INTRODUCTION);
+                    command.Parameters.AddWithValue("@COREPOINTS", lessonNote.COREPOINTS);
+                    command.Parameters.AddWithValue("@EVALUATIONREMARKS", lessonNote.EVALUATIONREMARKS);
+                    command.Parameters.AddWithValue("@Status", (int)LessonNoteStatus.New);
+
+                    try
+                    {
+                        await connection.OpenAsync();
+                        await command.ExecuteNonQueryAsync();
+                        return Ok("Lesson note posted successfully.");
+                    }
+                    catch (Exception ex)
+                    {
+                        return StatusCode(500, $"Internal server error: {ex.Message}");
+                    }
+                }
+            }
+        }
+
         // Endpoint to get all students
         [HttpGet("Students")]
         public async Task<IActionResult> GetStudents()
