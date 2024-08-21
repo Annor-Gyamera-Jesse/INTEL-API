@@ -135,6 +135,49 @@ namespace INTEL_API.Controllers
             }
         }
 
+        //this endpoint is responsible to handle Lesson note status per user or according to user
+        [HttpGet("LessonNoteStatus/{userId}")]
+        public async Task<IActionResult> GetLessonNoteStatusUpdates(int userId)
+        {
+            var connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (var connection = new SqlConnection(connectionString))
+            {
+                await connection.OpenAsync();
+
+                var query = @"
+            SELECT LessonnotesID, CASE Status 
+                WHEN 1 THEN 'New'
+                WHEN 2 THEN 'Approved'
+                WHEN 3 THEN 'Cancelled'
+            END AS Status, RecDateCreated
+            FROM SchoolManagement.lessonnotes
+            WHERE UserId = @UserId AND Status IN (1, 2, 3)
+            ORDER BY RecDateCreated DESC";
+
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@UserId", userId);
+
+                    var updates = new List<LessonNoteStatusUpdate>();
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            updates.Add(new LessonNoteStatusUpdate
+                            {
+                                LessonNoteId = reader.GetInt32(0),
+                                Status = reader.GetString(1),
+                                DateUpdated = reader.GetDateTime(2)
+                            });
+                        }
+                    }
+
+                    return Ok(updates);
+                }
+            }
+        }
+
+
         // Endpoint to get roles for a specific user
         [HttpGet("UserRoles/{userId}")]
         public async Task<IActionResult> GetUserRoles(int userId)
