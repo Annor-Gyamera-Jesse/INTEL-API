@@ -885,9 +885,9 @@ namespace INTEL_API.Controllers
 
         // Endpoint to add a new student attendance
         [HttpPost("AddStudentAttendance")]
-        public async Task<IActionResult> AddStudentAttendance([FromBody] StudentsAttendance studentAttendance)
+        public async Task<IActionResult> AddStudentAttendance([FromBody] List<StudentsAttendance> studentAttendances)
         {
-            if (studentAttendance == null)
+            if (studentAttendances == null || !studentAttendances.Any())
             {
                 return BadRequest("Invalid student attendance data");
             }
@@ -897,17 +897,20 @@ namespace INTEL_API.Controllers
             {
                 await connection.OpenAsync();
 
-                using (var command = new SqlCommand(
-                    "INSERT INTO SchoolManagement.StudentsAttendance (StudentFirstName, StudentLastName, ClassID, EnableSwitch) " +
-                    "VALUES (@StudentFirstName, @StudentLastName, @ClassID, @EnableSwitch)",
-                    connection))
+                foreach (var studentAttendance in studentAttendances)
                 {
-                    command.Parameters.AddWithValue("@StudentFirstName", studentAttendance.StudentFirstName);
-                    command.Parameters.AddWithValue("@StudentLastName", studentAttendance.StudentLastName);
-                    command.Parameters.AddWithValue("@ClassID", studentAttendance.ClassID);
-                    command.Parameters.AddWithValue("@EnableSwitch", studentAttendance.EnableSwitch);
+                    using (var command = new SqlCommand(
+                        "INSERT INTO SchoolManagement.StudentsAttendance (StudentFirstName, StudentLastName, ClassID, EnableSwitch) " +
+                        "VALUES (@StudentFirstName, @StudentLastName, @ClassID, @EnableSwitch)",
+                        connection))
+                    {
+                        command.Parameters.AddWithValue("@StudentFirstName", studentAttendance.StudentFirstName);
+                        command.Parameters.AddWithValue("@StudentLastName", studentAttendance.StudentLastName);
+                        command.Parameters.AddWithValue("@ClassID", studentAttendance.ClassID);
+                        command.Parameters.AddWithValue("@EnableSwitch", studentAttendance.EnableSwitch);
 
-                    await command.ExecuteNonQueryAsync();
+                        await command.ExecuteNonQueryAsync();
+                    }
                 }
 
                 return Ok("Student attendance added successfully");
