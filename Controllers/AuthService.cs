@@ -897,18 +897,39 @@ namespace INTEL_API.Controllers
             {
                 await connection.OpenAsync();
 
+                // Check if attendance has already been submitted for the selected class and date
+                var userId = studentAttendances.First().UserId;
+                var classId = studentAttendances.First().ClassID;
+                var currentDate = DateTime.Today;
+
+                using (var checkCommand = new SqlCommand(
+                    "SELECT COUNT(1) FROM SchoolManagement.StudentsAttendance WHERE UserID = @UserID AND ClassID = @ClassID AND CAST(RecDateCreated AS DATE) = @CurrentDate",
+                    connection))
+                {
+                    checkCommand.Parameters.AddWithValue("@UserID", userId);
+                    checkCommand.Parameters.AddWithValue("@ClassID", classId);
+                    checkCommand.Parameters.AddWithValue("@CurrentDate", currentDate);
+
+                    var count = (int)await checkCommand.ExecuteScalarAsync();
+
+                    if (count > 0)
+                    {
+                        return BadRequest("Attendance has already been submitted for today.");
+                    }
+                }
+
                 foreach (var studentAttendance in studentAttendances)
                 {
                     using (var command = new SqlCommand(
-                        "INSERT INTO SchoolManagement.StudentsAttendance (StudentFirstName, StudentLastName, ClassID, EnableSwitch, UserID) " +
-                        "VALUES (@StudentFirstName, @StudentLastName, @ClassID, @EnableSwitch, @UserID)",
+                        "INSERT INTO SchoolManagement.StudentsAttendance (StudentFirstName, StudentLastName, ClassID, EnableSwitch, UserID, RecDateCreated) " +
+                        "VALUES (@StudentFirstName, @StudentLastName, @ClassID, @EnableSwitch, @UserID, GETDATE())",
                         connection))
                     {
                         command.Parameters.AddWithValue("@StudentFirstName", studentAttendance.StudentFirstName);
                         command.Parameters.AddWithValue("@StudentLastName", studentAttendance.StudentLastName);
                         command.Parameters.AddWithValue("@ClassID", studentAttendance.ClassID);
                         command.Parameters.AddWithValue("@EnableSwitch", studentAttendance.EnableSwitch);
-                        command.Parameters.AddWithValue("@UserID", studentAttendance.UserId);  // Add UserID parameter
+                        command.Parameters.AddWithValue("@UserID", studentAttendance.UserId);
 
                         await command.ExecuteNonQueryAsync();
                     }
