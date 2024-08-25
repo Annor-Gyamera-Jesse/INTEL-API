@@ -177,6 +177,42 @@ namespace INTEL_API.Controllers
             }
         }
 
+        [HttpGet("ApprovedLessonNotes/{userId}")]
+        public async Task<IActionResult> GetApprovedLessonNotes(int userId)
+        {
+            var connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (var connection = new SqlConnection(connectionString))
+            {
+                await connection.OpenAsync();
+
+                var query = @"
+            SELECT LessonnotesID, Status, RecDateCreated
+            FROM SchoolManagement.lessonnotes
+            WHERE UserId = @UserId AND Status = 2
+            ORDER BY RecDateCreated DESC";
+
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@UserId", userId);
+
+                    var lessonNotes = new List<LessonNoteStatusUpdate>();
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            lessonNotes.Add(new LessonNoteStatusUpdate
+                            {
+                                LessonNoteId = reader.GetInt32(0),
+                                Status = reader.GetString(1), // Assuming Status is an integer
+                                DateUpdated = reader.GetDateTime(2)
+                            });
+                        }
+                    }
+
+                    return Ok(lessonNotes);
+                }
+            }
+        }
 
         // Endpoint to get roles for a specific user
         [HttpGet("UserRoles/{userId}")]
