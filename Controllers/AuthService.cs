@@ -900,14 +900,15 @@ namespace INTEL_API.Controllers
                 foreach (var studentAttendance in studentAttendances)
                 {
                     using (var command = new SqlCommand(
-                        "INSERT INTO SchoolManagement.StudentsAttendance (StudentFirstName, StudentLastName, ClassID, EnableSwitch) " +
-                        "VALUES (@StudentFirstName, @StudentLastName, @ClassID, @EnableSwitch)",
+                        "INSERT INTO SchoolManagement.StudentsAttendance (StudentFirstName, StudentLastName, ClassID, EnableSwitch, UserID) " +
+                        "VALUES (@StudentFirstName, @StudentLastName, @ClassID, @EnableSwitch, @UserID)",
                         connection))
                     {
                         command.Parameters.AddWithValue("@StudentFirstName", studentAttendance.StudentFirstName);
                         command.Parameters.AddWithValue("@StudentLastName", studentAttendance.StudentLastName);
                         command.Parameters.AddWithValue("@ClassID", studentAttendance.ClassID);
                         command.Parameters.AddWithValue("@EnableSwitch", studentAttendance.EnableSwitch);
+                        command.Parameters.AddWithValue("@UserID", studentAttendance.UserId);  // Add UserID parameter
 
                         await command.ExecuteNonQueryAsync();
                     }
