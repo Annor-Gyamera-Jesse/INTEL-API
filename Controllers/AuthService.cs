@@ -390,12 +390,13 @@ namespace INTEL_API.Controllers
                         {
                             tasks.Add(new TeacherTaskViewModel
                             {
-                                TeachersName = reader.GetString(0),
-                                TeacherTask = reader.GetString(1),
-                                SwitchBar = reader.GetBoolean(2),
-                                StartDate = reader.GetDateTime(3),
-                                EndDate = reader.GetDateTime(4),
-                                Status = reader.GetInt32(5)                             
+                                TeacherTaskID = reader.GetInt32(0),
+                                TeachersName = reader.GetString(1),
+                                TeacherTask = reader.GetString(2),
+                                SwitchBar = reader.GetBoolean(3),
+                                StartDate = reader.GetDateTime(4),
+                                EndDate = reader.GetDateTime(5),
+                                Status = reader.GetInt32(6)
                             });
                         }
                     }
