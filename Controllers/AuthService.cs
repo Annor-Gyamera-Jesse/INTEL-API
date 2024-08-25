@@ -177,6 +177,7 @@ namespace INTEL_API.Controllers
             }
         }
 
+        //not in use 
         [HttpGet("ApprovedLessonNotes/{userId}")]
         public async Task<IActionResult> GetApprovedLessonNotes(int userId)
         {
@@ -204,6 +205,49 @@ namespace INTEL_API.Controllers
                             {
                                 LessonNoteId = reader.GetInt32(0),
                                 Status = reader.GetString(1), // Assuming Status is an integer
+                                DateUpdated = reader.GetDateTime(2)
+                            });
+                        }
+                    }
+
+                    return Ok(lessonNotes);
+                }
+            }
+        }
+
+        [HttpGet("ApprovedLessonNotes")]
+        public async Task<IActionResult> GetApprovedLessonNotes()
+        {
+            var connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (var connection = new SqlConnection(connectionString))
+            {
+                await connection.OpenAsync();
+
+                var query = @"
+            SELECT UserId, 
+                   CASE Status 
+                       WHEN 1 THEN 'New'
+                       WHEN 2 THEN 'Approved'
+                       WHEN 3 THEN 'Cancelled'
+                   END AS Status,
+                   RecDateCreated AS DateUpdated
+            FROM SchoolManagement.lessonnotes
+            WHERE Status = @ApprovedStatus
+            ORDER BY RecDateCreated DESC";
+
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@ApprovedStatus", (int)LessonNoteStatus.Approved);
+
+                    var lessonNotes = new List<LessonNoteStatusUpdate>();
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            lessonNotes.Add(new LessonNoteStatusUpdate
+                            {
+                                LessonNoteId = reader.GetInt32(0),
+                                Status = reader.GetString(1),
                                 DateUpdated = reader.GetDateTime(2)
                             });
                         }
