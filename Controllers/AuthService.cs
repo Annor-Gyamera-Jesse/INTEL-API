@@ -846,10 +846,10 @@ namespace INTEL_API.Controllers
                 using (var command = new SqlCommand(
                     "INSERT INTO SchoolManagement.SchoolExams (StudentName, ClassName, AcademicYear, VacationDate, PromotedTo, NumberOnRoll, Term, " +
                     "Position, NextTermsBegins, AttendanceOut, AttendanceIn, SchoolCourse, ClassScore, ExamsScore, TotalScore, SubjectsPositions, " +
-                    "Grade, TeachersRemarks, Conduct, HeadmasterRemark, SchoolInformation, TeachersSignature, HeadMasterSignature) " +
+                    "Grade, TeachersRemarks, Conduct, HeadmasterRemark, SchoolInformation, TeachersSignature, HeadMasterSignature, UserID) " +
                     "VALUES (@StudentName, @ClassName, @AcademicYear, @VacationDate, @PromotedTo, @NumberOnRoll, @Term, @Position, @NextTermsBegins, " +
                     "@AttendanceOut, @AttendanceIn, @SchoolCourse, @ClassScore, @ExamsScore, @TotalScore, @SubjectsPositions, @Grade, @TeachersRemarks, " +
-                    "@Conduct, @HeadmasterRemark, @SchoolInformation, @TeachersSignature, @HeadMasterSignature)",
+                    "@Conduct, @HeadmasterRemark, @SchoolInformation, @TeachersSignature, @HeadMasterSignature, @UserID)",
                     connection))
                 {
                     command.Parameters.AddWithValue("@StudentName", schoolExam.StudentName);
@@ -875,7 +875,7 @@ namespace INTEL_API.Controllers
                     command.Parameters.AddWithValue("@SchoolInformation", schoolExam.SchoolInformation);
                     command.Parameters.AddWithValue("@TeachersSignature", schoolExam.TeachersSignature);
                     command.Parameters.AddWithValue("@HeadMasterSignature", schoolExam.HeadMasterSignature);
-
+                    command.Parameters.AddWithValue("@UserID", schoolExam.UserId);
                     await command.ExecuteNonQueryAsync();
                 }
 
