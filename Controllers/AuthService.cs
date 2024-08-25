@@ -373,6 +373,39 @@ namespace INTEL_API.Controllers
             }
         }
 
+        [HttpGet("TeachersTask")]
+        public async Task<ActionResult<IEnumerable<TeacherTaskViewModel>>> GetTeachersTasks()
+        {
+            List<TeacherTaskViewModel> tasks = new List<TeacherTaskViewModel>();
+            string connectionString = _configuration.GetConnectionString("DefaultConnection");
+
+            using (SqlConnection conn = new SqlConnection(connectionString))
+            {
+                await conn.OpenAsync();
+                using (SqlCommand cmd = new SqlCommand("SELECT * FROM SchoolManagement.TeachersTask", conn))
+                {
+                    using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            tasks.Add(new TeacherTaskViewModel
+                            {
+                                TeachersName = reader.GetString(0),
+                                TeacherTask = reader.GetString(1),
+                                SwitchBar = reader.GetBoolean(2),
+                                StartDate = reader.GetDateTime(3),
+                                EndDate = reader.GetDateTime(4),
+                                Status = reader.GetInt32(5)                             
+                            });
+                        }
+                    }
+                }
+            }
+
+            return Ok(tasks);
+        }
+
+
         // Endpoint to get all students
         [HttpGet("Students")]
         public async Task<IActionResult> GetStudents()
@@ -929,6 +962,8 @@ namespace INTEL_API.Controllers
                 return Ok(nonTeachingStaffsAttendance);
             }
         }
+
+
 
         // Endpoint to get all report view pages
         [HttpGet("ReportViewPages")]
