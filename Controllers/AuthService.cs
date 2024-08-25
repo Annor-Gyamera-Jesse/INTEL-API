@@ -817,6 +817,55 @@ namespace INTEL_API.Controllers
             }
         }
 
+        [HttpGet("TeacherSubjectAssignments")]
+        public async Task<IActionResult> GetTeacherSubjectAssignments()
+        {
+            var connectionString = _configuration.GetConnectionString("DefaultConnection");
+            var assignments = new List<TeacherSubjectAssignmentViewModel>();
+
+            using (var connection = new SqlConnection(connectionString))
+            {
+                await connection.OpenAsync();
+
+                var query = @"
+                    SELECT tsa.AssignmentID, 
+                           CONCAT(t.TeacherFirstName, ' ', t.TeacherLastName) AS TeacherName, 
+                           tsa.SCID, 
+                           tsa.ClassID, 
+                           tsa.DayID, 
+                           tsa.SubjectStartTime, 
+                           tsa.SubjectEndTime, 
+                           tsa.RecDateCreated
+                    FROM SchoolManagement.TeacherSubjectAssignment tsa
+                    INNER JOIN SchoolManagement.Teacher t ON tsa.TeacherID = t.TeacherID
+                    INNER JOIN SchoolManagement.StudentTimetable_Days std ON tsa.DayID = std.DayID";
+
+                using (var command = new SqlCommand(query, connection))
+                {
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            var assignment = new TeacherSubjectAssignmentViewModel
+                            {
+                                AssignmentID = reader.GetInt32(0),
+                                TeacherName = reader.GetString(1),
+                                SCID = reader.GetString(2),
+                                ClassID = reader.GetString(3),
+                                DayID = reader.GetInt32(4),
+                                SubjectStartTime = reader.GetDateTime(5),
+                                SubjectEndTime = reader.GetDateTime(6),
+                                RecDateCreated = reader.GetDateTime(7)
+                            };
+                            assignments.Add(assignment);
+                        }
+                    }
+                }
+            }
+
+            return Ok(assignments);
+        }
+
         // Endpoint to get all teachers attendance out
         [HttpGet("TeachersAttendanceOut")]
         public async Task<IActionResult> GetTeachersAttendanceOut()
