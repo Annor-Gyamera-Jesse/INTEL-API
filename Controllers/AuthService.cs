@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.SqlClient;
 using ViewModels;
 
@@ -1103,5 +1104,32 @@ namespace INTEL_API.Controllers
                 return Ok("Student attendance added successfully");
             }
         }
+     
+        [HttpPost("logerror")]
+        public async Task<IActionResult> LogError([FromBody] ErrorLogEntry logEntry)
+        {
+            if (logEntry == null)
+            {
+                return BadRequest("Invalid log entry.");
+            }
+
+            var connectionString = _configuration.GetConnectionString("DefaultConnection");
+
+            using (var connection = new SqlConnection(connectionString))
+            {
+                var command = new SqlCommand("INSERT INTO SchoolManagementSecurity.ErrorLog (LogDate, ErrorMessage, StackTrace, ControllerName, ActionName) VALUES (@LogDate, @ErrorMessage, @StackTrace, @ControllerName, @ActionName)", connection);
+                command.Parameters.Add(new SqlParameter("@LogDate", SqlDbType.DateTime) { Value = logEntry.LogDate });
+                command.Parameters.Add(new SqlParameter("@ErrorMessage", SqlDbType.NVarChar) { Value = logEntry.ErrorMessage });
+                command.Parameters.Add(new SqlParameter("@StackTrace", SqlDbType.NVarChar) { Value = logEntry.StackTrace ?? (object)DBNull.Value });
+                command.Parameters.Add(new SqlParameter("@ControllerName", SqlDbType.NVarChar) { Value = logEntry.ControllerName ?? (object)DBNull.Value });
+                command.Parameters.Add(new SqlParameter("@ActionName", SqlDbType.NVarChar) { Value = logEntry.ActionName ?? (object)DBNull.Value });
+
+                await connection.OpenAsync();
+                await command.ExecuteNonQueryAsync();
+            }
+
+            return Ok("Error logged successfully.");
+        }
+
     }
 }
