@@ -1104,7 +1104,7 @@ namespace INTEL_API.Controllers
                 return Ok("Student attendance added successfully");
             }
         }
-     
+
         [HttpPost("logerror")]
         public async Task<IActionResult> LogError([FromBody] ErrorLogEntry logEntry)
         {
@@ -1117,12 +1117,17 @@ namespace INTEL_API.Controllers
 
             using (var connection = new SqlConnection(connectionString))
             {
-                var command = new SqlCommand("INSERT INTO SchoolManagementSecurity.ErrorLog (LogDate, ErrorMessage, StackTrace, ControllerName, ActionName) VALUES (@LogDate, @ErrorMessage, @StackTrace, @ControllerName, @ActionName)", connection);
+                var command = new SqlCommand(
+                    "INSERT INTO SchoolManagementSecurity.ErrorLog (LogDate, ErrorMessage, StackTrace, ControllerName, ActionName, UserID) " +
+                    "VALUES (@LogDate, @ErrorMessage, @StackTrace, @ControllerName, @ActionName, @UserID)",
+                    connection
+                );
                 command.Parameters.Add(new SqlParameter("@LogDate", SqlDbType.DateTime) { Value = logEntry.LogDate });
                 command.Parameters.Add(new SqlParameter("@ErrorMessage", SqlDbType.NVarChar) { Value = logEntry.ErrorMessage });
                 command.Parameters.Add(new SqlParameter("@StackTrace", SqlDbType.NVarChar) { Value = logEntry.StackTrace ?? (object)DBNull.Value });
                 command.Parameters.Add(new SqlParameter("@ControllerName", SqlDbType.NVarChar) { Value = logEntry.ControllerName ?? (object)DBNull.Value });
                 command.Parameters.Add(new SqlParameter("@ActionName", SqlDbType.NVarChar) { Value = logEntry.ActionName ?? (object)DBNull.Value });
+                command.Parameters.Add(new SqlParameter("@UserID", SqlDbType.Int) { Value = logEntry.UserID ?? (object)DBNull.Value });  // Add UserID parameter
 
                 await connection.OpenAsync();
                 await command.ExecuteNonQueryAsync();
@@ -1130,6 +1135,7 @@ namespace INTEL_API.Controllers
 
             return Ok("Error logged successfully.");
         }
+
 
     }
 }
