@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Dapper;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using ViewModels;
+using ViewModels.NoticeBoard;
 
 namespace INTEL_API.Controllers
 {
@@ -1136,6 +1138,15 @@ namespace INTEL_API.Controllers
             return Ok("Error logged successfully.");
         }
 
-
+        // GET: api/NoticeBoard
+        [HttpGet]
+        public async Task<IActionResult> GetNotices()
+        {
+            using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                var notices = await connection.QueryAsync<NoticeBoardViewModel>("SELECT * FROM SchoolManagement.NoticeBoard WHERE IsActive = 1");
+                return Ok(notices);
+            }
+        }
     }
 }
