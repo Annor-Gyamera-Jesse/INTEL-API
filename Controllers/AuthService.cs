@@ -1139,14 +1139,45 @@ namespace INTEL_API.Controllers
         }
 
         // GET: api/NoticeBoard
-        [HttpGet]
-        public async Task<IActionResult> GetNotices()
+        [HttpGet("GetNotices")]
+        public async Task<IActionResult> GetNotices([FromQuery] int userId)
         {
             using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
             {
-                var notices = await connection.QueryAsync<NoticeBoardViewModel>("SELECT * FROM SchoolManagement.NoticeBoard WHERE IsActive = 1");
+                var notices = await connection.QueryAsync<NoticeBoardViewModel>(
+                    @"SELECT n.*, COALESCE(unrs.IsRead, 0) AS IsRead
+              FROM SchoolManagement.NoticeBoard n
+              LEFT JOIN SchoolManagement.UserNoticeReadStatus unrs
+              ON n.NoticeID = unrs.NoticeID AND unrs.UserID = @UserID
+              WHERE n.IsActive = 1",
+                    new { UserID = userId }
+                );
+
                 return Ok(notices);
             }
         }
+
+        [HttpPost("MarkAsRead")]
+        public async Task<IActionResult> MarkAsRead([FromBody] UserNoticeReadStatusDto dto)
+        {
+            using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                // Insert or update the read status
+                var result = await connection.ExecuteAsync(
+                    @"IF EXISTS (SELECT 1 FROM SchoolManagement.UserNoticeReadStatus WHERE UserID = @UserID AND NoticeID = @NoticeID)
+              UPDATE SchoolManagement.UserNoticeReadStatus SET IsRead = 1, ReadDate = GETDATE() WHERE UserID = @UserID AND NoticeID = @NoticeID
+              ELSE
+              INSERT INTO SchoolManagement.UserNoticeReadStatus (UserID, NoticeID, IsRead, ReadDate) VALUES (@UserID, @NoticeID, 1, GETDATE())",
+                    new { dto.UserID, dto.NoticeID }
+                );
+
+                if (result > 0)
+                {
+                    return Ok();
+                }
+                return StatusCode(StatusCodes.Status500InternalServerError, "Error marking notice as read.");
+            }
+        }
+
     }
 }
