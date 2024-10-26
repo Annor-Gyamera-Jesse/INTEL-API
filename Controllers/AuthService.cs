@@ -261,6 +261,50 @@ namespace INTEL_API.Controllers
             }
         }
 
+        [HttpPost("postLessonNote")]
+        public async Task<IActionResult> PostLessonNote([FromBody] LessonNote lessonNote)
+        {
+            if (lessonNote == null)
+            {
+                return BadRequest("Invalid lesson note data.");
+            }
+
+            var connectionString = _configuration.GetConnectionString("DefaultConnection");
+
+            using (var connection = new SqlConnection(connectionString))
+            {
+                var query = @"
+            INSERT INTO SchoolManagement.lessonnotes 
+            (UserId, SchoolCourse, Topic, OBJECTIVES, TLMTLA, INTRODUCTION, COREPOINTS, EVALUATIONREMARKS, Status)
+            VALUES 
+            (@UserId, @SchoolCourse, @Topic, @OBJECTIVES, @TLMTLA, @INTRODUCTION, @COREPOINTS, @EVALUATIONREMARKS, @Status)";
+
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@UserId", lessonNote.UserId);
+                    command.Parameters.AddWithValue("@SchoolCourse", lessonNote.SchoolCourse);
+                    command.Parameters.AddWithValue("@Topic", lessonNote.Topic);
+                    command.Parameters.AddWithValue("@OBJECTIVES", lessonNote.OBJECTIVES);
+                    command.Parameters.AddWithValue("@TLMTLA", lessonNote.TLMTLA);
+                    command.Parameters.AddWithValue("@INTRODUCTION", lessonNote.INTRODUCTION);
+                    command.Parameters.AddWithValue("@COREPOINTS", lessonNote.COREPOINTS);
+                    command.Parameters.AddWithValue("@EVALUATIONREMARKS", lessonNote.EVALUATIONREMARKS);
+                    command.Parameters.AddWithValue("@Status", (int)LessonNoteStatus.New);
+
+                    try
+                    {
+                        await connection.OpenAsync();
+                        await command.ExecuteNonQueryAsync();
+                        return Ok("Lesson note posted successfully.");
+                    }
+                    catch (Exception ex)
+                    {
+                        return StatusCode(500, $"Internal server error: {ex.Message}");
+                    }
+                }
+            }
+        }
+
         // Endpoint to get roles for a specific user
         [HttpGet("UserRoles/{userId}")]
         public async Task<IActionResult> GetUserRoles(int userId)
@@ -330,51 +374,7 @@ namespace INTEL_API.Controllers
 
                 return Ok(menuItems);
             }
-        }
-
-        [HttpPost("postLessonNote")]
-        public async Task<IActionResult> PostLessonNote([FromBody] LessonNote lessonNote)
-        {
-            if (lessonNote == null)
-            {
-                return BadRequest("Invalid lesson note data.");
-            }
-
-            var connectionString = _configuration.GetConnectionString("DefaultConnection");
-
-            using (var connection = new SqlConnection(connectionString))
-            {
-                var query = @"
-            INSERT INTO SchoolManagement.lessonnotes 
-            (UserId, SchoolCourse, Topic, OBJECTIVES, TLMTLA, INTRODUCTION, COREPOINTS, EVALUATIONREMARKS, Status)
-            VALUES 
-            (@UserId, @SchoolCourse, @Topic, @OBJECTIVES, @TLMTLA, @INTRODUCTION, @COREPOINTS, @EVALUATIONREMARKS, @Status)";
-
-                using (var command = new SqlCommand(query, connection))
-                {
-                    command.Parameters.AddWithValue("@UserId", lessonNote.UserId);
-                    command.Parameters.AddWithValue("@SchoolCourse", lessonNote.SchoolCourse);
-                    command.Parameters.AddWithValue("@Topic", lessonNote.Topic);
-                    command.Parameters.AddWithValue("@OBJECTIVES", lessonNote.OBJECTIVES);
-                    command.Parameters.AddWithValue("@TLMTLA", lessonNote.TLMTLA);
-                    command.Parameters.AddWithValue("@INTRODUCTION", lessonNote.INTRODUCTION);
-                    command.Parameters.AddWithValue("@COREPOINTS", lessonNote.COREPOINTS);
-                    command.Parameters.AddWithValue("@EVALUATIONREMARKS", lessonNote.EVALUATIONREMARKS);
-                    command.Parameters.AddWithValue("@Status", (int)LessonNoteStatus.New);
-
-                    try
-                    {
-                        await connection.OpenAsync();
-                        await command.ExecuteNonQueryAsync();
-                        return Ok("Lesson note posted successfully.");
-                    }
-                    catch (Exception ex)
-                    {
-                        return StatusCode(500, $"Internal server error: {ex.Message}");
-                    }
-                }
-            }
-        }
+        }      
 
         [HttpGet("TeachersTask")]
         public async Task<ActionResult<IEnumerable<TeacherTaskViewModel>>> GetTeachersTasks()
