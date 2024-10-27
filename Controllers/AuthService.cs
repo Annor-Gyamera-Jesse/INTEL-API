@@ -261,6 +261,7 @@ namespace INTEL_API.Controllers
             }
         }
 
+        //this is was the old lessonNot post api
         [HttpPost("postLessonNote")]
         public async Task<IActionResult> PostLessonNote([FromBody] LessonNote lessonNote)
         {
@@ -304,6 +305,71 @@ namespace INTEL_API.Controllers
                 }
             }
         }
+
+        //thi is the new lessonnote api
+        [HttpPost("postLessonNote")]
+        public async Task<IActionResult> PostTEACHERSLESSONNOTESe([FromBody] TEACHERSLESSONNOTES lessonNote)
+        {
+            if (lessonNote == null)
+            {
+                return BadRequest("Invalid lesson note data.");
+            }
+
+            var connectionString = _configuration.GetConnectionString("DefaultConnection");
+
+            using (var connection = new SqlConnection(connectionString))
+            {
+                var query = @"
+            INSERT INTO SchoolManagement.TEACHERSLESSONNOTES 
+            (UserId, SchoolCourse, Strand, SubStrand, ContentStandard, Indicator, 
+             TeachingLearningResources, TeachingLearningResourcePreparationNotes, 
+             SourcesLearningResources, LearningGroup, LearnerExpectation, 
+             ImportantGradeExpectation, LearningOutcomes, FormofAssessment, 
+             LearnerEntryBehavior, SequenceofLesson, Status, UpdatedBy, Class, Week_Ending)
+            VALUES 
+            (@UserId, @SchoolCourse, @Strand, @SubStrand, @ContentStandard, @Indicator, 
+             @TeachingLearningResources, @TeachingLearningResourcePreparationNotes, 
+             @SourcesLearningResources, @LearningGroup, @LearnerExpectation, 
+             @ImportantGradeExpectation, @LearningOutcomes, @FormofAssessment, 
+             @LearnerEntryBehavior, @SequenceofLesson, @Status, @UpdatedBy, @Class, @Week_Ending)";
+
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@UserId", lessonNote.UserId);
+                    command.Parameters.AddWithValue("@SchoolCourse", lessonNote.SchoolCourse);
+                    command.Parameters.AddWithValue("@Strand", lessonNote.Strand);
+                    command.Parameters.AddWithValue("@SubStrand", lessonNote.SubStrand);
+                    command.Parameters.AddWithValue("@ContentStandard", lessonNote.ContentStandard);
+                    command.Parameters.AddWithValue("@Indicator", lessonNote.Indicator);
+                    command.Parameters.AddWithValue("@TeachingLearningResources", lessonNote.TeachingLearningResources);
+                    command.Parameters.AddWithValue("@TeachingLearningResourcePreparationNotes", lessonNote.TeachingLearningResourcePreparationNotes);
+                    command.Parameters.AddWithValue("@SourcesLearningResources", lessonNote.SourcesLearningResources);
+                    command.Parameters.AddWithValue("@LearningGroup", lessonNote.LearningGroup);
+                    command.Parameters.AddWithValue("@LearnerExpectation", lessonNote.LearnerExpectation);
+                    command.Parameters.AddWithValue("@ImportantGradeExpectation", lessonNote.ImportantGradeExpectation);
+                    command.Parameters.AddWithValue("@LearningOutcomes", lessonNote.LearningOutcomes);
+                    command.Parameters.AddWithValue("@FormofAssessment", lessonNote.FormofAssessment);
+                    command.Parameters.AddWithValue("@LearnerEntryBehavior", lessonNote.LearnerEntryBehavior);
+                    command.Parameters.AddWithValue("@SequenceofLesson", lessonNote.SequenceofLesson);
+                    command.Parameters.AddWithValue("@Status", lessonNote.Status);
+                    command.Parameters.AddWithValue("@UpdatedBy", lessonNote.UpdatedBy);
+                    command.Parameters.AddWithValue("@Class", lessonNote.Class);
+                    command.Parameters.AddWithValue("@Week_Ending", lessonNote.WeekEnding);
+
+                    try
+                    {
+                        await connection.OpenAsync();
+                        await command.ExecuteNonQueryAsync();
+                        return Ok("Lesson note posted successfully.");
+                    }
+                    catch (Exception ex)
+                    {
+                        return StatusCode(500, $"Internal server error: {ex.Message}");
+                    }
+                }
+            }
+        }
+
 
         // Endpoint to get roles for a specific user
         [HttpGet("UserRoles/{userId}")]
