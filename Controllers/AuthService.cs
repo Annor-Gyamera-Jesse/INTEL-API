@@ -307,8 +307,8 @@ namespace INTEL_API.Controllers
         }
 
         //thi is the new lessonnote api
-        [HttpPost("postLessonNote")]
-        public async Task<IActionResult> PostTEACHERSLESSONNOTESe([FromBody] TEACHERSLESSONNOTES lessonNote)
+        [HttpPost("PostTEACHERSLESSONNOTES")]
+        public async Task<IActionResult> PostTEACHERSLESSONNOTES([FromBody] TEACHERSLESSONNOTES lessonNote)
         {
             if (lessonNote == null)
             {
