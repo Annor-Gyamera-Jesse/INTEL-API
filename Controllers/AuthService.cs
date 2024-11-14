@@ -325,13 +325,13 @@ namespace INTEL_API.Controllers
              TeachingLearningResources, TeachingLearningResourcePreparationNotes, 
              SourcesLearningResources, LearningGroup, LearnerExpectation, 
              ImportantGradeExpectation, LearningOutcomes, FormofAssessment, 
-             LearnerEntryBehavior, SequenceofLesson, Status, UpdatedBy, Class, Week_Ending)
+             LearnerEntryBehavior, SequenceofLesson, ClassID, Week_Ending)
             VALUES 
             (@UserId, @SchoolCourse, @Strand, @SubStrand, @ContentStandard, @Indicator, 
              @TeachingLearningResources, @TeachingLearningResourcePreparationNotes, 
              @SourcesLearningResources, @LearningGroup, @LearnerExpectation, 
              @ImportantGradeExpectation, @LearningOutcomes, @FormofAssessment, 
-             @LearnerEntryBehavior, @SequenceofLesson, @Status, @UpdatedBy, @Class, @Week_Ending)";
+             @LearnerEntryBehavior, @SequenceofLesson, @ClassID, @Week_Ending)";
 
                 using (var command = new SqlCommand(query, connection))
                 {
@@ -351,9 +351,7 @@ namespace INTEL_API.Controllers
                     command.Parameters.AddWithValue("@FormofAssessment", lessonNote.FormofAssessment);
                     command.Parameters.AddWithValue("@LearnerEntryBehavior", lessonNote.LearnerEntryBehavior);
                     command.Parameters.AddWithValue("@SequenceofLesson", lessonNote.SequenceofLesson);
-                    command.Parameters.AddWithValue("@Status", lessonNote.Status);
-                    command.Parameters.AddWithValue("@UpdatedBy", lessonNote.UpdatedBy);
-                    command.Parameters.AddWithValue("@Class", lessonNote.Class);
+                    command.Parameters.AddWithValue("@ClassID", lessonNote.ClassID);
                     command.Parameters.AddWithValue("@Week_Ending", lessonNote.WeekEnding);
 
                     try
