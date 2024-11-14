@@ -1202,7 +1202,7 @@ namespace INTEL_API.Controllers
             return Ok("Error logged successfully.");
         }
 
-        // GET: api/NoticeBoard
+        // later update GET: api/NoticeBoard the initial idea was to display message to user with the help of their role so like message for role parents only parent get to view that message
         [HttpGet("GetNotices")]
         public async Task<IActionResult> GetNotices([FromQuery] int userId)
         {
@@ -1243,5 +1243,26 @@ namespace INTEL_API.Controllers
             }
         }
 
+        /*to get notice board message for all user to see*/
+        [HttpGet]
+        [Route("GetNoticeBoard")]
+        public IActionResult GetNotices()
+        {
+            IEnumerable<NoticeViewModel> notices;
+            string query = "SELECT Title, Content, Author FROM SchoolManagement.NoticeBoard";
+
+            using (IDbConnection db = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                try
+                {
+                    notices = db.Query<NoticeViewModel>(query);
+                    return Ok(notices);
+                }
+                catch (SqlException ex)
+                {
+                    return StatusCode(500, new { message = "An error occurred while retrieving notices.", error = ex.Message });
+                }
+            }
+        }
     }
 }
