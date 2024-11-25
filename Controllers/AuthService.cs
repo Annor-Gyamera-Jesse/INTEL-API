@@ -438,41 +438,29 @@ namespace INTEL_API.Controllers
 
                 return Ok(menuItems);
             }
-        }      
-
-        [HttpGet("TeachersTask")]
-        public async Task<ActionResult<IEnumerable<TeacherTaskViewModel>>> GetTeachersTasks()
-        {
-            List<TeacherTaskViewModel> tasks = new List<TeacherTaskViewModel>();
-            string connectionString = _configuration.GetConnectionString("DefaultConnection");
-
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                await conn.OpenAsync();
-                using (SqlCommand cmd = new SqlCommand("SELECT * FROM SchoolManagement.TeachersTask", conn))
-                {
-                    using (SqlDataReader reader = await cmd.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            tasks.Add(new TeacherTaskViewModel
-                            {
-                                TeacherTaskID = reader.GetInt32(0),
-                                TeachersName = reader.GetString(1),
-                                TeacherTask = reader.GetString(2),
-                                SwitchBar = reader.GetBoolean(3),
-                                StartDate = reader.GetDateTime(4),
-                                EndDate = reader.GetDateTime(5),
-                                Status = reader.GetInt32(6)
-                            });
-                        }
-                    }
-                }
-            }
-
-            return Ok(tasks);
         }
 
+        /*to get teachers task*/
+        [HttpGet]
+        [Route("GetTeachersTasks")]
+        public IActionResult GetTeachersTasks()
+        {
+            IEnumerable<TeachersTaskViewModel> tasks;
+            string query = "SELECT TeachersName, TeacherTask, SwitchBar, StartDate, EndDate, Status FROM SchoolManagement.TeachersTask";
+
+            using (IDbConnection db = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                try
+                {
+                    tasks = db.Query<TeachersTaskViewModel>(query);
+                    return Ok(tasks);
+                }
+                catch (SqlException ex)
+                {
+                    return StatusCode(500, new { message = "An error occurred while retrieving tasks.", error = ex.Message });
+                }
+            }
+        }
 
         // Endpoint to get all students
         [HttpGet("Students")]
