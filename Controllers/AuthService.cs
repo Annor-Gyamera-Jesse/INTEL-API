@@ -6,6 +6,7 @@ using System.Data;
 using System.Data.SqlClient;
 using ViewModels;
 using ViewModels.NoticeBoard;
+using ViewModels.Teachers_Assessment;
 
 namespace INTEL_API.Controllers
 {
@@ -1252,5 +1253,73 @@ namespace INTEL_API.Controllers
                 }
             }
         }
+
+        /*get student by their class*/
+        [HttpGet]
+        [Route("GetStudentsByClass")]
+        public IActionResult GetStudentsByClass(string classID)
+        {
+            IEnumerable<StudentViewModel> students;
+            string query = "SELECT * FROM SchoolManagement.Students WHERE ClassID = @ClassID";
+
+            using (IDbConnection db = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                try
+                {
+                    students = db.Query<StudentViewModel>(query, new { ClassID = classID });
+                    return Ok(students);
+                }
+                catch (SqlException ex)
+                {
+                    return StatusCode(500, new { message = "An error occurred while retrieving students.", error = ex.Message });
+                }
+            }
+        }
+
+        [HttpPost("SaveAssessment")]
+        public IActionResult SaveAssessment([FromBody] TeachersAssessmentViewModel model)
+        {
+            if (model == null)
+            {
+                return BadRequest(new { message = "Invalid assessment data provided." });
+            }
+
+            try
+            {
+                using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                {
+                    var query = @"
+                INSERT INTO SchoolManagement.TeachersAssesment 
+                (StudentName, ClassID, TEST1, TEST2, GROUPWORK, HOMEWORK, CLASSTEST, TOTAL_X, EXAMS_SCORE, Y, X_Y, POSITION, UserID)
+                VALUES (@StudentName, @ClassID, @TEST1, @TEST2, @GROUPWORK, @HOMEWORK, @CLASSTEST, @TOTAL_X, @EXAMS_SCORE, @Y, @X_Y, @POSITION, @UserID)";
+
+                    var parameters = new
+                    {
+                        StudentName = $"{model.StudentFirstName} {model.StudentLastName}", // Combine first and last name
+                        model.ClassID,
+                        model.TEST1,
+                        model.TEST2,
+                        model.GROUPWORK,
+                        model.HOMEWORK,
+                        model.CLASSTEST,
+                        model.TOTAL_X,
+                        model.EXAMS_SCORE,
+                        model.Y,
+                        model.X_Y,
+                        model.POSITION,
+                        model.UserID
+                    };
+
+                    connection.Execute(query, parameters);
+                }
+
+                return Ok(new { message = "Assessment saved successfully." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while saving the assessment.", error = ex.Message });
+            }
+        }
+
     }
 }
