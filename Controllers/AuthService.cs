@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using ViewModels;
+using ViewModels.Fees;
 using ViewModels.NoticeBoard;
 using ViewModels.Teachers_Assessment;
 
@@ -1321,5 +1322,52 @@ namespace INTEL_API.Controllers
             }
         }
 
+
+        /*Fees*/
+        // Endpoint to get fee details for a student by StudentID
+        [HttpGet("GetFeeDetails/{studentId}")]
+        public async Task<IActionResult> GetFeeDetails(int studentId)
+        {
+            // Create the SQL query to fetch the fee details for the given StudentID
+            string sqlQuery = @"
+                SELECT 
+                    f.FeeID,
+                    f.StudentID,
+                    f.StudentName,
+                    f.FeeTypeName,
+                    f.ClassID,
+                    f.AmountPaid,
+                    f.AmountLeft,
+                    f.PaymentDate,
+                    f.DueDate,
+                    f.Note
+                FROM SchoolManagement.StudentFees f
+                WHERE f.StudentID = @StudentID
+            ";
+
+            try
+            {
+                // Open the database connection
+                using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                {
+                    // Query the database and retrieve the fee details for the student
+                    var feeDetails = await connection.QueryAsync<StudentFee>(sqlQuery, new { StudentID = studentId });
+
+                    // If no records found, return a NotFound response
+                    if (feeDetails == null || !feeDetails.Any())
+                    {
+                        return NotFound($"No fee records found for student with ID {studentId}");
+                    }
+
+                    // Return the fee details as a response
+                    return Ok(feeDetails);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Return a 500 error if something goes wrong
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
     }
 }
