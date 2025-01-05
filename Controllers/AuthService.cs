@@ -1,13 +1,11 @@
 ﻿using Dapper;
+using INTEL_API.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-using ViewModels;
-using ViewModels.Fees;
-using ViewModels.NoticeBoard;
-using ViewModels.Teachers_Assessment;
+
 
 namespace INTEL_API.Controllers
 {
@@ -24,7 +22,7 @@ namespace INTEL_API.Controllers
 
         // Login endpoint
         [HttpPost("login")]
-        public IActionResult Login([FromBody] User request)
+        public IActionResult Login([FromBody] UserViewModel request)
         {
             string connectionString = _configuration.GetConnectionString("DefaultConnection");
             using (SqlConnection connection = new SqlConnection(connectionString))
@@ -97,7 +95,7 @@ namespace INTEL_API.Controllers
             {
                 await connection.OpenAsync();
 
-                var usersWithRoles = new List<User>();
+                var usersWithRoles = new List<UserViewModel>();
                 using (var command = new SqlCommand("SELECT ur.UserRoleID, u.UserID, u.UserName, u.Password, ur.RoleName, ur.Enable " +
                                                     "FROM SchoolManagement.MobileAppRoles ur " +
                                                     "JOIN SchoolManagement.Users u ON ur.UserID = u.UserID", connection))
@@ -109,14 +107,14 @@ namespace INTEL_API.Controllers
                         var existingUser = usersWithRoles.Find(u => u.UserID == userRoleID);
                         if (existingUser == null)
                         {
-                            var user = new User
+                            var user = new UserViewModel
                             {
                                 UserID = reader.GetInt32(1),
                                 UserName = reader.IsDBNull(2) ? string.Empty : reader.GetString(2), // Handle NULL
                                 Password = reader.IsDBNull(3) ? string.Empty : reader.GetString(3), // Handle NULL
-                                Roles = new List<UserRole>()
+                                Roles = new List<UserRoleViewModel>()
                             };
-                            user.Roles.Add(new UserRole
+                            user.Roles.Add(new UserRoleViewModel
                             {
                                 UserRoleID = reader.GetInt32(0),
                                 RoleName = reader.IsDBNull(4) ? string.Empty : reader.GetString(4), // Handle NULL
@@ -126,7 +124,7 @@ namespace INTEL_API.Controllers
                         }
                         else
                         {
-                            existingUser.Roles.Add(new UserRole
+                            existingUser.Roles.Add(new UserRoleViewModel
                             {
                                 UserRoleID = reader.GetInt32(0),
                                 RoleName = reader.IsDBNull(4) ? string.Empty : reader.GetString(4), // Handle NULL
@@ -163,12 +161,12 @@ namespace INTEL_API.Controllers
                 {
                     command.Parameters.AddWithValue("@UserId", userId);
 
-                    var updates = new List<LessonNoteStatusUpdate>();
+                    var updates = new List<LessonNoteStatusUpdateViewModel>();
                     using (var reader = await command.ExecuteReaderAsync())
                     {
                         while (await reader.ReadAsync())
                         {
-                            updates.Add(new LessonNoteStatusUpdate
+                            updates.Add(new LessonNoteStatusUpdateViewModel
                             {
                                 LessonNoteId = reader.GetInt32(0),
                                 Status = reader.GetString(1),
@@ -201,12 +199,12 @@ namespace INTEL_API.Controllers
                 {
                     command.Parameters.AddWithValue("@UserId", userId);
 
-                    var lessonNotes = new List<LessonNoteStatusUpdate>();
+                    var lessonNotes = new List<LessonNoteStatusUpdateViewModel>();
                     using (var reader = await command.ExecuteReaderAsync())
                     {
                         while (await reader.ReadAsync())
                         {
-                            lessonNotes.Add(new LessonNoteStatusUpdate
+                            lessonNotes.Add(new LessonNoteStatusUpdateViewModel
                             {
                                 LessonNoteId = reader.GetInt32(0),
                                 Status = reader.GetString(1), // Assuming Status is an integer
@@ -244,12 +242,12 @@ namespace INTEL_API.Controllers
                 {
                     command.Parameters.AddWithValue("@ApprovedStatus", (int)LessonNoteStatus.Approved);
 
-                    var lessonNotes = new List<LessonNoteStatusUpdate>();
+                    var lessonNotes = new List<LessonNoteStatusUpdateViewModel>();
                     using (var reader = await command.ExecuteReaderAsync())
                     {
                         while (await reader.ReadAsync())
                         {
-                            lessonNotes.Add(new LessonNoteStatusUpdate
+                            lessonNotes.Add(new LessonNoteStatusUpdateViewModel
                             {
                                 LessonNoteId = reader.GetInt32(0),
                                 Status = reader.GetString(1),
@@ -265,7 +263,7 @@ namespace INTEL_API.Controllers
 
         //this is was the old lessonNot post api
         [HttpPost("postLessonNote")]
-        public async Task<IActionResult> PostLessonNote([FromBody] LessonNote lessonNote)
+        public async Task<IActionResult> PostLessonNote([FromBody] LessonNoteViewModel lessonNote)
         {
             if (lessonNote == null)
             {
@@ -310,7 +308,7 @@ namespace INTEL_API.Controllers
 
         //thi is the new lessonnote api
         [HttpPost("PostTEACHERSLESSONNOTES")]
-        public async Task<IActionResult> PostTEACHERSLESSONNOTES([FromBody] TEACHERSLESSONNOTES lessonNote)
+        public async Task<IActionResult> PostTEACHERSLESSONNOTES([FromBody] TeachersLessonNoteViewModel lessonNote)
         {
             if (lessonNote == null)
             {
@@ -380,7 +378,7 @@ namespace INTEL_API.Controllers
             {
                 await connection.OpenAsync();
 
-                var userRoles = new List<UserRole>();
+                var userRoles = new List<UserRoleViewModel>();
                 using (var command = new SqlCommand("SELECT UserRoleID, RoleName, Enable FROM SchoolManagement.MobileAppRoles WHERE UserID = @UserId", connection))
                 {
                     command.Parameters.AddWithValue("@UserId", userId);
@@ -388,7 +386,7 @@ namespace INTEL_API.Controllers
                     {
                         while (await reader.ReadAsync())
                         {
-                            var userRole = new UserRole
+                            var userRole = new UserRoleViewModel
                             {
                                 UserRoleID = reader.GetInt32(0),
                                 RoleName = reader.IsDBNull(1) ? string.Empty : reader.GetString(1), // Handle NULL value for RoleName
@@ -1260,14 +1258,14 @@ namespace INTEL_API.Controllers
         [Route("GetStudentsByClass")]
         public IActionResult GetStudentsByClass(string classID)
         {
-            IEnumerable<StudentViewModel> students;
-            string query = "SELECT * FROM SchoolManagement.Students WHERE ClassID = @ClassID";
+            IEnumerable<object> students;
+            string query = "SELECT StudentID, CONCAT(StudentFirstName, ' ', StudentLastName) AS FullName, ClassID FROM SchoolManagement.Students WHERE ClassID = @ClassID";
 
             using (IDbConnection db = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
             {
                 try
                 {
-                    students = db.Query<StudentViewModel>(query, new { ClassID = classID });
+                    students = db.Query(query, new { ClassID = classID });
                     return Ok(students);
                 }
                 catch (SqlException ex)
@@ -1276,6 +1274,7 @@ namespace INTEL_API.Controllers
                 }
             }
         }
+
 
         [HttpPost("SaveAssessment")]
         public IActionResult SaveAssessment([FromBody] TeachersAssessmentViewModel model)
