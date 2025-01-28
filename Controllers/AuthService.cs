@@ -1406,9 +1406,11 @@ namespace INTEL_API.Controllers
         [Route("GetFeeTypes/{classId}")]
         public IActionResult GetFeeTypes(string classId)
         {
-            string query = @"SELECT FeeTypeName, Amount, ClassID 
-                             FROM SchoolManagement.FeeTypes
-                             WHERE ClassID = @ClassID";
+            string query = @"
+        SELECT FeeTypeName, Amount, ClassID 
+        FROM SchoolManagement.FeeTypes
+        WHERE ClassID = @ClassID 
+        AND DeletedBy IS NULL"; // Ensure the fee type has not been deleted
 
             using (IDbConnection db = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
             {
@@ -1424,6 +1426,7 @@ namespace INTEL_API.Controllers
                 }
             }
         }
+
 
         // Make Payment and Update StudentFees
         [HttpPost]
