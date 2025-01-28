@@ -2,9 +2,12 @@
 using INTEL_API.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Net.Http.Headers;
+using System.Text;
 
 
 namespace INTEL_API.Controllers
@@ -1368,5 +1371,153 @@ namespace INTEL_API.Controllers
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
+
+        // Search Student by StudentID
+        [HttpGet]
+        [Route("SearchStudentById/{studentId}")]
+        public IActionResult SearchStudentById(int studentId)
+        {
+            string query = @"SELECT s.StudentFirstName, s.StudentLastName, s.ClassID, s.ImageData
+                             FROM SchoolManagement.Students s
+                             WHERE s.StudentID = @StudentID";
+
+            using (IDbConnection db = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                try
+                {
+                    var student = db.QuerySingleOrDefault(query, new { StudentID = studentId });
+
+                    if (student == null)
+                    {
+                        return NotFound(new { message = "Student not found." });
+                    }
+
+                    return Ok(student);
+                }
+                catch (SqlException ex)
+                {
+                    return StatusCode(500, new { message = "An error occurred while retrieving the student.", error = ex.Message });
+                }
+            }
+        }
+
+        // Get Fee Types by ClassID
+        [HttpGet]
+        [Route("GetFeeTypes/{classId}")]
+        public IActionResult GetFeeTypes(string classId)
+        {
+            string query = @"SELECT FeeTypeName, Amount, ClassID 
+                             FROM SchoolManagement.FeeTypes
+                             WHERE ClassID = @ClassID";
+
+            using (IDbConnection db = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                try
+                {
+                    var feeTypes = db.Query(query, new { ClassID = classId });
+
+                    return Ok(feeTypes);
+                }
+                catch (SqlException ex)
+                {
+                    return StatusCode(500, new { message = "An error occurred while retrieving fee types.", error = ex.Message });
+                }
+            }
+        }
+
+        // Make Payment and Update StudentFees
+        [HttpPost]
+        [Route("MakePayment")]
+        public IActionResult MakePayment([FromBody] PaymentViewModel payment)
+        {
+            string query = @"INSERT INTO SchoolManagement.StudentFees 
+                             (StudentID, FeeTypeID, StudentName, FeeTypeName, ClassID, AmountPaid, AmountLeft, PaymentDate, UserID)
+                             VALUES (@StudentID, @FeeTypeID, @StudentName, @FeeTypeName, @ClassID, @AmountPaid, @AmountLeft, @PaymentDate, @UserID)";
+
+            using (IDbConnection db = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                try
+                {
+                    db.Execute(query, new
+                    {
+                        StudentID = payment.StudentID,
+                        FeeTypeID = payment.FeeTypeID,
+                        StudentName = payment.StudentName,
+                        FeeTypeName = payment.FeeTypeName,
+                        ClassID = payment.ClassID,
+                        AmountPaid = payment.AmountPaid,
+                        AmountLeft = payment.AmountLeft,
+                        PaymentDate = payment.PaymentDate,
+                        UserID = payment.UserID
+                    });
+
+                    return Ok(new { message = "Payment processed successfully." });
+                }
+                catch (SqlException ex)
+                {
+                    return StatusCode(500, new { message = "An error occurred while processing the payment.", error = ex.Message });
+                }
+            }
+        }
+
+        // Backend: Verify the Payment
+        [HttpPost]
+        [Route("verify-payment")]
+        public async Task<IActionResult> VerifyPayment([FromBody] PaymentVerificationRequest request)
+        {
+            var url = $"https://api.paystack.co/transaction/verify/{request.reference}";
+            var secretKey = "sk_test_..."; // Your secret key
+
+            using (var client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Add("Authorization", "Bearer " + secretKey);
+
+                var response = await client.GetAsync(url);
+                var responseString = await response.Content.ReadAsStringAsync();
+
+                var verificationData = JsonConvert.DeserializeObject<dynamic>(responseString);
+
+                if (verificationData?.status == "success")
+                {
+                    // Payment was successful
+                    // Update your database with the payment status and transaction details
+                    return Ok(new { status = "success", message = "Payment successful" });
+                }
+                else
+                {
+                    // Payment failed
+                    return BadRequest(new { status = "failed", message = "Payment failed" });
+                }
+            }
+        }
+
+        // C# Example (ASP.NET Core)
+        [HttpPost]
+        [Route("create-payment")]
+        public async Task<IActionResult> CreatePayment([FromBody] PaymentRequest request)
+        {
+            var url = "https://api.paystack.co/transaction/initialize";
+            var secretKey = "sk_test_..."; // Your secret key
+
+            using (var client = new HttpClient())
+            {
+                client.DefaultRequestHeaders.Add("Authorization", "Bearer " + secretKey);
+
+                var data = new
+                {
+                    amount = request.Amount * 100, // Paystack expects amounts in kobo
+                    email = request.Email,
+                    callback_url = "https://your-callback-url.com",
+                    // other necessary fields (like the transaction reference, etc.)
+                };
+
+                var content = new StringContent(JsonConvert.SerializeObject(data), Encoding.UTF8, "application/json");
+                var response = await client.PostAsync(url, content);
+                var responseString = await response.Content.ReadAsStringAsync();
+
+                return Ok(responseString); // Send the response to your Flutter app
+            }
+        }
+
     }
 }
