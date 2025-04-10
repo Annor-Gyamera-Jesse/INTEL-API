@@ -1523,5 +1523,84 @@ namespace INTEL_API.Controllers
             }
         }
 
+        [HttpGet("GetStudentById")]
+        public IActionResult GetStudentById(int studentId)
+        {
+            var query = @"SELECT StudentID, CONCAT(StudentFirstName, ' ', StudentLastName) AS FullName, ClassID 
+                  FROM SchoolManagement.Students 
+                  WHERE StudentID = @StudentID";
+
+            using (IDbConnection db = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                try
+                {
+                    var student = db.QueryFirstOrDefault(query, new { StudentID = studentId });
+                    if (student == null)
+                        return NotFound(new { message = "Student not found." });
+
+                    return Ok(student);
+                }
+                catch (Exception ex)
+                {
+                    return StatusCode(500, new { error = ex.Message });
+                }
+            }
+        }
+
+        [HttpGet("GetTerms")]
+        public IActionResult GetTerms()
+        {
+            using (IDbConnection db = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                var query = "SELECT Term FROM SchoolManagement.SchoolTerm";
+                var terms = db.Query<string>(query);
+                return Ok(terms);
+            }
+        }
+
+        [HttpGet("GetStudentExamReport")]
+        public IActionResult GetStudentExamReport(string studentName, string term)
+        {
+            var query = @"SELECT StudentName, ClassName, Term, SchoolCourse, ClassScore, ExamsScore, TotalScore, Grade 
+                  FROM SchoolManagement.SchoolExams 
+                  WHERE StudentName = @StudentName AND Term = @Term";
+
+            using (IDbConnection db = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                var examRecords = db.Query(query, new { StudentName = studentName, Term = term });
+
+                if (!examRecords.Any())
+                    return NotFound(new { message = "No exam records found." });
+
+                return Ok(examRecords);
+            }
+        }
+
+        [HttpGet] //am not using this at the moment
+        [Route("GetExamReport")]
+        public IActionResult GetExamReport(string studentName, string term)
+        {
+            string query = @"SELECT * FROM SchoolManagement.SchoolExams 
+                     WHERE StudentName = @StudentName AND Term = @Term";
+
+            using (IDbConnection db = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                try
+                {
+                    var report = db.QueryFirstOrDefault(query, new { StudentName = studentName, Term = term });
+
+                    if (report == null)
+                        return NotFound(new { message = "No report found for this student and term." });
+
+                    return Ok(report);
+                }
+                catch (SqlException ex)
+                {
+                    return StatusCode(500, new { message = "Error fetching exam report.", error = ex.Message });
+                }
+            }
+        }
+
+
     }
 }
