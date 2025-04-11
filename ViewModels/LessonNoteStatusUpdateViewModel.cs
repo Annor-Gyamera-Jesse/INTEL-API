@@ -2,6 +2,7 @@
 {
     public class LessonNoteStatusUpdateViewModel
     {
+        public int UserId { get; set; }
         public int LessonNoteId { get; set; }
         public string Status { get; set; }
         public DateTime DateUpdated { get; set; }

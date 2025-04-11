@@ -221,50 +221,90 @@ namespace INTEL_API.Controllers
             }
         }
 
+        //[HttpGet("ApprovedLessonNotes")]
+        //public async Task<IActionResult> GetApprovedLessonNotes()
+        //{
+        //    var connectionString = _configuration.GetConnectionString("DefaultConnection");
+        //    using (var connection = new SqlConnection(connectionString))
+        //    {
+        //        await connection.OpenAsync();
+
+        //        var query = @"
+        //    SELECT UserId, 
+        //           CASE Status 
+        //               WHEN 1 THEN 'New'
+        //               WHEN 2 THEN 'Approved'
+        //               WHEN 3 THEN 'Cancelled'
+        //           END AS Status,
+        //           RecDateCreated AS DateUpdated
+        //    FROM SchoolManagement.lessonnotes
+        //    WHERE Status = @ApprovedStatus
+        //    ORDER BY RecDateCreated DESC";
+
+        //        using (var command = new SqlCommand(query, connection))
+        //        {
+        //            command.Parameters.AddWithValue("@ApprovedStatus", (int)LessonNoteStatus.Approved);
+
+        //            var lessonNotes = new List<LessonNoteStatusUpdateViewModel>();
+        //            using (var reader = await command.ExecuteReaderAsync())
+        //            {
+        //                while (await reader.ReadAsync())
+        //                {
+        //                    lessonNotes.Add(new LessonNoteStatusUpdateViewModel
+        //                    {
+        //                        LessonNoteId = reader.GetInt32(0),
+        //                        Status = reader.GetString(1),
+        //                        DateUpdated = reader.GetDateTime(2)
+        //                    });
+        //                }
+        //            }
+
+        //            return Ok(lessonNotes);
+        //        }
+        //    }
+        //}
+
+        //this is was the old lessonNot post api
+
         [HttpGet("ApprovedLessonNotes")]
         public async Task<IActionResult> GetApprovedLessonNotes()
         {
             var connectionString = _configuration.GetConnectionString("DefaultConnection");
-            using (var connection = new SqlConnection(connectionString))
+            using var connection = new SqlConnection(connectionString);
+            await connection.OpenAsync();
+
+            var query = @"
+        SELECT LessonnotesID,
+               UserId, 
+               CASE Status 
+                   WHEN 1 THEN 'New'
+                   WHEN 2 THEN 'Approved'
+                   WHEN 3 THEN 'Cancelled'
+               END AS Status,
+               UpdatedOn AS DateUpdated
+        FROM SchoolManagement.TEACHERSLESSONNOTES
+        WHERE Status = @ApprovedStatus
+        ORDER BY UpdatedOn DESC";
+
+            using var command = new SqlCommand(query, connection);
+            command.Parameters.AddWithValue("@ApprovedStatus", (int)LessonNoteStatus.Approved);
+
+            var lessonNotes = new List<LessonNoteStatusUpdateViewModel>();
+            using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
             {
-                await connection.OpenAsync();
-
-                var query = @"
-            SELECT UserId, 
-                   CASE Status 
-                       WHEN 1 THEN 'New'
-                       WHEN 2 THEN 'Approved'
-                       WHEN 3 THEN 'Cancelled'
-                   END AS Status,
-                   RecDateCreated AS DateUpdated
-            FROM SchoolManagement.lessonnotes
-            WHERE Status = @ApprovedStatus
-            ORDER BY RecDateCreated DESC";
-
-                using (var command = new SqlCommand(query, connection))
+                lessonNotes.Add(new LessonNoteStatusUpdateViewModel
                 {
-                    command.Parameters.AddWithValue("@ApprovedStatus", (int)LessonNoteStatus.Approved);
-
-                    var lessonNotes = new List<LessonNoteStatusUpdateViewModel>();
-                    using (var reader = await command.ExecuteReaderAsync())
-                    {
-                        while (await reader.ReadAsync())
-                        {
-                            lessonNotes.Add(new LessonNoteStatusUpdateViewModel
-                            {
-                                LessonNoteId = reader.GetInt32(0),
-                                Status = reader.GetString(1),
-                                DateUpdated = reader.GetDateTime(2)
-                            });
-                        }
-                    }
-
-                    return Ok(lessonNotes);
-                }
+                    LessonNoteId = reader.GetInt32(0), // LessonnotesID
+                    UserId = reader.GetInt32(1),        // UserId
+                    Status = reader.GetString(2),       // Status (string)
+                    DateUpdated = reader.GetDateTime(3) // UpdatedOn
+                });
             }
+
+            return Ok(lessonNotes);
         }
 
-        //this is was the old lessonNot post api
         [HttpPost("postLessonNote")]
         public async Task<IActionResult> PostLessonNote([FromBody] LessonNoteViewModel lessonNote)
         {
