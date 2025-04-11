@@ -482,25 +482,26 @@ namespace INTEL_API.Controllers
                     {
                         var student = new Student
                         {
-                            StudentID = reader.GetInt32(0),
-                            StudentFirstName = reader.GetString(1),
-                            StudentLastName = reader.GetString(2),
-                            StudentDateOfBirth = reader.GetDateTime(3),
-                            StudentGender = reader.GetString(4)[0],
-                            StudentAddress = reader.GetString(5),
-                            StudentPhoneNumber = reader.GetString(6),
-                            StudentEmail = reader.GetString(7),
+                            StudentID = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
+                            StudentFirstName = reader.IsDBNull(1) ? null : reader.GetString(1),
+                            StudentLastName = reader.IsDBNull(2) ? null : reader.GetString(2),
+                            StudentDateOfBirth = reader.IsDBNull(3) ? (DateTime?)null : reader.GetDateTime(3),
+                            StudentGender = reader.IsDBNull(4) ? '\0' : reader.GetString(4)[0],
+                            StudentAddress = reader.IsDBNull(5) ? null : reader.GetString(5),
+                            StudentPhoneNumber = reader.IsDBNull(6) ? null : reader.GetString(6),
+                            StudentEmail = reader.IsDBNull(7) ? null : reader.GetString(7),
                             ImageData = reader.IsDBNull(8) ? null : (byte[])reader.GetValue(8),
-                            ClassID = reader.GetString(9),
-                            GuardianFullName = reader.GetString(10),
-                            GuardianGender = reader.GetString(11)[0],
-                            GuardianHouseAddress = reader.GetString(12),
-                            GuardianWorkAddress = reader.GetString(13),
-                            GuardianEmail = reader.GetString(14),
-                            GuardianFirstContact = reader.GetString(15),
-                            GuardianSecondContact = reader.GetString(16),
-                            EnableSwitch = reader.GetBoolean(17)
+                            ClassID = reader.IsDBNull(9) ? null : reader.GetString(9),
+                            GuardianFullName = reader.IsDBNull(10) ? null : reader.GetString(10),
+                            GuardianGender = reader.IsDBNull(11) ? '\0' : reader.GetString(11)[0],
+                            GuardianHouseAddress = reader.IsDBNull(12) ? null : reader.GetString(12),
+                            GuardianWorkAddress = reader.IsDBNull(13) ? null : reader.GetString(13),
+                            GuardianEmail = reader.IsDBNull(14) ? null : reader.GetString(14),
+                            GuardianFirstContact = reader.IsDBNull(15) ? null : reader.GetString(15),
+                            GuardianSecondContact = reader.IsDBNull(16) ? null : reader.GetString(16),
+                            EnableSwitch = reader.IsDBNull(17) ? false : reader.GetBoolean(17)
                         };
+
                         students.Add(student);
                     }
                 }
@@ -1521,6 +1522,85 @@ namespace INTEL_API.Controllers
                 return Ok(responseString); // Send the response to your Flutter app
             }
         }
+
+        [HttpGet("GetStudentById")]
+        public IActionResult GetStudentById(int studentId)
+        {
+            var query = @"SELECT StudentID, CONCAT(StudentFirstName, ' ', StudentLastName) AS FullName, ClassID 
+                  FROM SchoolManagement.Students 
+                  WHERE StudentID = @StudentID";
+
+            using (IDbConnection db = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                try
+                {
+                    var student = db.QueryFirstOrDefault(query, new { StudentID = studentId });
+                    if (student == null)
+                        return NotFound(new { message = "Student not found." });
+
+                    return Ok(student);
+                }
+                catch (Exception ex)
+                {
+                    return StatusCode(500, new { error = ex.Message });
+                }
+            }
+        }
+
+        [HttpGet("GetTerms")]
+        public IActionResult GetTerms()
+        {
+            using (IDbConnection db = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                var query = "SELECT Term FROM SchoolManagement.SchoolTerm";
+                var terms = db.Query<string>(query);
+                return Ok(terms);
+            }
+        }
+
+        [HttpGet("GetStudentExamReport")]
+        public IActionResult GetStudentExamReport(string studentName, string term)
+        {
+            var query = @"SELECT StudentName, ClassName, Term, SchoolCourse, ClassScore, ExamsScore, TotalScore, Grade 
+                  FROM SchoolManagement.SchoolExams 
+                  WHERE StudentName = @StudentName AND Term = @Term";
+
+            using (IDbConnection db = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                var examRecords = db.Query(query, new { StudentName = studentName, Term = term });
+
+                if (!examRecords.Any())
+                    return NotFound(new { message = "No exam records found." });
+
+                return Ok(examRecords);
+            }
+        }
+
+        [HttpGet] //am not using this at the moment
+        [Route("GetExamReport")]
+        public IActionResult GetExamReport(string studentName, string term)
+        {
+            string query = @"SELECT * FROM SchoolManagement.SchoolExams 
+                     WHERE StudentName = @StudentName AND Term = @Term";
+
+            using (IDbConnection db = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+            {
+                try
+                {
+                    var report = db.QueryFirstOrDefault(query, new { StudentName = studentName, Term = term });
+
+                    if (report == null)
+                        return NotFound(new { message = "No report found for this student and term." });
+
+                    return Ok(report);
+                }
+                catch (SqlException ex)
+                {
+                    return StatusCode(500, new { message = "Error fetching exam report.", error = ex.Message });
+                }
+            }
+        }
+
 
     }
 }
