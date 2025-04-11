@@ -323,18 +323,18 @@ namespace INTEL_API.Controllers
             using (var connection = new SqlConnection(connectionString))
             {
                 var query = @"
-            INSERT INTO SchoolManagement.TEACHERSLESSONNOTES 
-            (UserId, SchoolCourse, Strand, SubStrand, ContentStandard, Indicator, 
-             TeachingLearningResources, TeachingLearningResourcePreparationNotes, 
-             SourcesLearningResources, LearningGroup, LearnerExpectation, 
-             ImportantGradeExpectation, LearningOutcomes, FormofAssessment, 
-             LearnerEntryBehavior, SequenceofLesson, ClassID, Week_Ending)
-            VALUES 
-            (@UserId, @SchoolCourse, @Strand, @SubStrand, @ContentStandard, @Indicator, 
-             @TeachingLearningResources, @TeachingLearningResourcePreparationNotes, 
-             @SourcesLearningResources, @LearningGroup, @LearnerExpectation, 
-             @ImportantGradeExpectation, @LearningOutcomes, @FormofAssessment, 
-             @LearnerEntryBehavior, @SequenceofLesson, @ClassID, @Week_Ending)";
+        INSERT INTO SchoolManagement.TEACHERSLESSONNOTES 
+        (UserId, SchoolCourse, Strand, SubStrand, ContentStandard, Indicator, 
+         TeachingLearningResources, TeachingLearningResourcePreparationNotes, 
+         SourcesLearningResources, LearningGroup, LearnerExpectation, 
+         ImportantGradeExpectation, LearningOutcomes, FormofAssessment, 
+         LearnerEntryBehavior, SequenceofLesson, ClassID, Week_Ending, Status)
+        VALUES 
+        (@UserId, @SchoolCourse, @Strand, @SubStrand, @ContentStandard, @Indicator, 
+         @TeachingLearningResources, @TeachingLearningResourcePreparationNotes, 
+         @SourcesLearningResources, @LearningGroup, @LearnerExpectation, 
+         @ImportantGradeExpectation, @LearningOutcomes, @FormofAssessment, 
+         @LearnerEntryBehavior, @SequenceofLesson, @ClassID, @Week_Ending, @Status)";
 
                 using (var command = new SqlCommand(query, connection))
                 {
@@ -356,6 +356,7 @@ namespace INTEL_API.Controllers
                     command.Parameters.AddWithValue("@SequenceofLesson", lessonNote.SequenceofLesson);
                     command.Parameters.AddWithValue("@ClassID", lessonNote.ClassID);
                     command.Parameters.AddWithValue("@Week_Ending", lessonNote.WeekEnding);
+                    command.Parameters.AddWithValue("@Status", 1); // Every new post has status = 1 thats new
 
                     try
                     {
@@ -370,6 +371,7 @@ namespace INTEL_API.Controllers
                 }
             }
         }
+
 
 
         // Endpoint to get roles for a specific user
