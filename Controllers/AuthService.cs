@@ -1,5 +1,7 @@
 ﻿using Dapper;
 using INTEL_API.ViewModels;
+using INTEL_API.ViewModels.LEAVE_OF_ABSENCE;
+using INTEL_API.ViewModels.LEAVE_OF_ABSENCE.INTEL_API.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
@@ -1641,6 +1643,67 @@ namespace INTEL_API.Controllers
                     return StatusCode(500, new { message = "Error fetching exam report.", error = ex.Message });
                 }
             }
+        }
+
+        /*Apply for Leave*/
+        [HttpPost("ApplyForLeave")]
+        public async Task<IActionResult> ApplyForLeave([FromBody] LeaveApplicationViewModel leaveRequest)
+        {
+            var connectionString = _configuration.GetConnectionString("DefaultConnection");
+
+            using var connection = new SqlConnection(connectionString);
+
+            var query = @"
+        INSERT INTO SchoolManagement.LeaveOfAbsence 
+            (UserID, LeaveType, StartDate, EndDate, Reason, Status, DateRequested)
+        VALUES 
+            (@UserID, @LeaveType, @StartDate, @EndDate, @Reason, 'Pending', GETDATE());";
+
+            var result = await connection.ExecuteAsync(query, new
+            {
+                leaveRequest.UserID,                
+                leaveRequest.LeaveType,
+                leaveRequest.StartDate,
+                leaveRequest.EndDate,
+                leaveRequest.Reason
+            });
+
+            if (result > 0)
+            {
+                return Ok(new { success = true, message = "Leave request submitted successfully." });
+            }
+
+            return BadRequest(new { success = false, message = "Leave request submission failed." });
+        }
+
+        [HttpGet("LeaveStatusList")]
+        public async Task<IActionResult> GetApprovedOrRejectedLeaves()
+        {
+            var connectionString = _configuration.GetConnectionString("DefaultConnection");
+
+            using var connection = new SqlConnection(connectionString);
+
+            var query = @"
+        SELECT 
+            l.LeaveID,
+            u.FullName AS UserFullName,
+            l.LeaveType,
+            l.StartDate,
+            l.EndDate,
+            l.Reason,
+            l.Status,
+            ISNULL(approver.FullName, 'Pending') AS ApprovedByName,
+            l.DateRequested,
+            l.DateApproved
+        FROM SchoolManagement.LeaveOfAbsence l
+        INNER JOIN SchoolManagement.Users u ON l.UserID = u.UserID
+        LEFT JOIN SchoolManagement.Users approver ON l.ApprovedBy = approver.UserID
+        WHERE l.Status IN ('Approved', 'Rejected')
+        ORDER BY l.DateRequested DESC;";
+
+            var leaves = await connection.QueryAsync<LeaveStatusViewModel>(query);
+
+            return Ok(leaves);
         }
 
 
