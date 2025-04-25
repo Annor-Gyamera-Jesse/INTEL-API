@@ -91,6 +91,30 @@ namespace INTEL_API.Controllers
             }
         }
 
+        /*to get details for the Login screen and splashscreen*/
+        [HttpGet("GetLoginScreenDetails")]
+        public async Task<IActionResult> GetLoginScreenDetails()
+        {
+            using var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+            string query = @"
+        SELECT 
+            Title,
+            CompanyImage,
+            SchoolName,
+            CompanyRegisteredName,
+            SoftWareVerssion,
+            YEAR(GETDATE()) AS CompanyRegisteredDate
+        FROM SchoolManagement.LoginScreenDetails";
+
+            var result = await connection.QueryFirstOrDefaultAsync<LoginScreenDetailsViewModel>(query);
+
+            if (result == null)
+                return NotFound("No login screen details found.");
+
+            return Ok(result);
+        }
+
         // Endpoint to get users with roles
         [HttpGet("UsersWithRoles")]
         public async Task<IActionResult> GetUsersWithRoles()
