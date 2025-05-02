@@ -2,6 +2,7 @@
 using INTEL_API.ViewModels;
 using INTEL_API.ViewModels.LEAVE_OF_ABSENCE;
 using INTEL_API.ViewModels.LEAVE_OF_ABSENCE.INTEL_API.ViewModels;
+using INTEL_API.ViewModels.SchoolTerm;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
@@ -331,6 +332,7 @@ namespace INTEL_API.Controllers
             return Ok(lessonNotes);
         }
 
+        /*NOT IN USE*/
         [HttpPost("postLessonNote")]
         public async Task<IActionResult> PostLessonNote([FromBody] LessonNoteViewModel lessonNote)
         {
@@ -376,68 +378,81 @@ namespace INTEL_API.Controllers
         }
 
         //thi is the new lessonnote api
-        [HttpPost("PostTEACHERSLESSONNOTES")]
-        public async Task<IActionResult> PostTEACHERSLESSONNOTES([FromBody] TeachersLessonNoteViewModel lessonNote)
+        [HttpPost("AddSchoolExam")]
+        public async Task<IActionResult> AddSchoolExam([FromBody] SchoolExam schoolExam)
         {
-            if (lessonNote == null)
+            if (schoolExam == null)
             {
-                return BadRequest("Invalid lesson note data.");
+                return BadRequest("Invalid school exam data");
             }
 
             var connectionString = _configuration.GetConnectionString("DefaultConnection");
-
             using (var connection = new SqlConnection(connectionString))
             {
-                var query = @"
-        INSERT INTO SchoolManagement.TEACHERSLESSONNOTES 
-        (UserId, SchoolCourse, Strand, SubStrand, ContentStandard, Indicator, 
-         TeachingLearningResources, TeachingLearningResourcePreparationNotes, 
-         SourcesLearningResources, LearningGroup, LearnerExpectation, 
-         ImportantGradeExpectation, LearningOutcomes, FormofAssessment, 
-         LearnerEntryBehavior, SequenceofLesson, ClassID, Week_Ending, Status)
-        VALUES 
-        (@UserId, @SchoolCourse, @Strand, @SubStrand, @ContentStandard, @Indicator, 
-         @TeachingLearningResources, @TeachingLearningResourcePreparationNotes, 
-         @SourcesLearningResources, @LearningGroup, @LearnerExpectation, 
-         @ImportantGradeExpectation, @LearningOutcomes, @FormofAssessment, 
-         @LearnerEntryBehavior, @SequenceofLesson, @ClassID, @Week_Ending, @Status)";
+                await connection.OpenAsync();
 
-                using (var command = new SqlCommand(query, connection))
+                using (var transaction = connection.BeginTransaction())
                 {
-                    command.Parameters.AddWithValue("@UserId", lessonNote.UserId);
-                    command.Parameters.AddWithValue("@SchoolCourse", lessonNote.SchoolCourse);
-                    command.Parameters.AddWithValue("@Strand", lessonNote.Strand);
-                    command.Parameters.AddWithValue("@SubStrand", lessonNote.SubStrand);
-                    command.Parameters.AddWithValue("@ContentStandard", lessonNote.ContentStandard);
-                    command.Parameters.AddWithValue("@Indicator", lessonNote.Indicator);
-                    command.Parameters.AddWithValue("@TeachingLearningResources", lessonNote.TeachingLearningResources);
-                    command.Parameters.AddWithValue("@TeachingLearningResourcePreparationNotes", lessonNote.TeachingLearningResourcePreparationNotes);
-                    command.Parameters.AddWithValue("@SourcesLearningResources", lessonNote.SourcesLearningResources);
-                    command.Parameters.AddWithValue("@LearningGroup", lessonNote.LearningGroup);
-                    command.Parameters.AddWithValue("@LearnerExpectation", lessonNote.LearnerExpectation);
-                    command.Parameters.AddWithValue("@ImportantGradeExpectation", lessonNote.ImportantGradeExpectation);
-                    command.Parameters.AddWithValue("@LearningOutcomes", lessonNote.LearningOutcomes);
-                    command.Parameters.AddWithValue("@FormofAssessment", lessonNote.FormofAssessment);
-                    command.Parameters.AddWithValue("@LearnerEntryBehavior", lessonNote.LearnerEntryBehavior);
-                    command.Parameters.AddWithValue("@SequenceofLesson", lessonNote.SequenceofLesson);
-                    command.Parameters.AddWithValue("@ClassID", lessonNote.ClassID);
-                    command.Parameters.AddWithValue("@Week_Ending", lessonNote.WeekEnding);
-                    command.Parameters.AddWithValue("@Status", 1); // Every new post has status = 1 thats new
-
                     try
                     {
-                        await connection.OpenAsync();
-                        await command.ExecuteNonQueryAsync();
-                        return Ok("Lesson note posted successfully.");
+                        // Insert exam record
+                        using (var command = new SqlCommand(
+                            "INSERT INTO SchoolManagement.SchoolExams (StudentName, ClassName, AcademicYear, VacationDate, PromotedTo, NumberOnRoll, Term, " +
+                            "Position, NextTermsBegins, AttendanceOut, AttendanceIn, SchoolCourse, ClassScore, ExamsScore, TotalScore, SubjectsPositions, " +
+                            "Grade, TeachersRemarks, Conduct, HeadmasterRemark, SchoolInformation, TeachersSignature, HeadMasterSignature, UserID) " +
+                            "VALUES (@StudentName, @ClassName, @AcademicYear, @VacationDate, @PromotedTo, @NumberOnRoll, @Term, @Position, @NextTermsBegins, " +
+                            "@AttendanceOut, @AttendanceIn, @SchoolCourse, @ClassScore, @ExamsScore, @TotalScore, @SubjectsPositions, @Grade, @TeachersRemarks, " +
+                            "@Conduct, @HeadmasterRemark, @SchoolInformation, @TeachersSignature, @HeadMasterSignature, @UserID)",
+                            connection, transaction))
+                        {
+                            command.Parameters.AddWithValue("@StudentName", schoolExam.StudentName);
+                            command.Parameters.AddWithValue("@ClassName", schoolExam.ClassName);
+                            command.Parameters.AddWithValue("@AcademicYear", schoolExam.AcademicYear);
+                            command.Parameters.AddWithValue("@VacationDate", (object)schoolExam.VacationDate ?? DBNull.Value);
+                            command.Parameters.AddWithValue("@PromotedTo", schoolExam.PromotedTo);
+                            command.Parameters.AddWithValue("@NumberOnRoll", schoolExam.NumberOnRoll);
+                            command.Parameters.AddWithValue("@Term", schoolExam.Term);
+                            command.Parameters.AddWithValue("@Position", schoolExam.Position);
+                            command.Parameters.AddWithValue("@NextTermsBegins", (object)schoolExam.NextTermsBegins ?? DBNull.Value);
+                            command.Parameters.AddWithValue("@AttendanceOut", (object)schoolExam.AttendanceOut ?? DBNull.Value);
+                            command.Parameters.AddWithValue("@AttendanceIn", (object)schoolExam.AttendanceIn ?? DBNull.Value);
+                            command.Parameters.AddWithValue("@SchoolCourse", schoolExam.SchoolCourse);
+                            command.Parameters.AddWithValue("@ClassScore", schoolExam.ClassScore);
+                            command.Parameters.AddWithValue("@ExamsScore", schoolExam.ExamsScore);
+                            command.Parameters.AddWithValue("@TotalScore", schoolExam.TotalScore);
+                            command.Parameters.AddWithValue("@SubjectsPositions", schoolExam.SubjectsPositions);
+                            command.Parameters.AddWithValue("@Grade", schoolExam.Grade);
+                            command.Parameters.AddWithValue("@TeachersRemarks", schoolExam.TeachersRemarks);
+                            command.Parameters.AddWithValue("@Conduct", schoolExam.Conduct);
+                            command.Parameters.AddWithValue("@HeadmasterRemark", (object)schoolExam.HeadmasterRemark ?? DBNull.Value);
+                            command.Parameters.AddWithValue("@SchoolInformation", (object)schoolExam.SchoolInformation ?? DBNull.Value);
+                            command.Parameters.AddWithValue("@TeachersSignature", (object)schoolExam.TeachersSignature ?? DBNull.Value);
+                            command.Parameters.AddWithValue("@HeadMasterSignature", (object)schoolExam.HeadMasterSignature ?? DBNull.Value);
+                            command.Parameters.AddWithValue("@UserID", schoolExam.UserId);
+                            await command.ExecuteNonQueryAsync();
+                        }
+
+                        // Update student class
+                        using (var updateCommand = new SqlCommand(
+                            "UPDATE SchoolManagement.Students SET ClassID = @PromotedTo WHERE StudentFirstName + ' ' + StudentLastName = @StudentName",
+                            connection, transaction))
+                        {
+                            updateCommand.Parameters.AddWithValue("@PromotedTo", schoolExam.PromotedTo);
+                            updateCommand.Parameters.AddWithValue("@StudentName", schoolExam.StudentName);
+                            await updateCommand.ExecuteNonQueryAsync();
+                        }
+
+                        transaction.Commit();
+                        return Ok("School exam added and student promoted successfully.");
                     }
                     catch (Exception ex)
                     {
-                        return StatusCode(500, $"Internal server error: {ex.Message}");
+                        transaction.Rollback();
+                        return StatusCode(500, $"Error: {ex.Message}");
                     }
                 }
             }
         }
-
 
 
         // Endpoint to get roles for a specific user
@@ -1091,8 +1106,43 @@ namespace INTEL_API.Controllers
             }
         }
 
+        /*END-POINT TO GET ALL SCHOOL TERMS*/
+        [HttpGet("GetAllTerms")]
+        public IActionResult GetAllTerms()
+        {
+            var terms = new List<SchoolTerm>();
 
+            try
+            {
+                using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                {
+                    string query = "SELECT TermID, Term FROM SchoolManagement.SchoolTerm";
 
+                    using (var command = new SqlCommand(query, connection))
+                    {
+                        connection.Open();
+                        using (var reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                terms.Add(new SchoolTerm
+                                {
+                                    TermID = Convert.ToInt32(reader["TermID"]),
+                                    Term = reader["Term"].ToString()
+                                });
+                            }
+                        }
+                    }
+                }
+
+                return Ok(terms);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Error fetching terms: " + ex.Message);
+            }
+        }
+        
         // Endpoint to get all report view pages
         [HttpGet("ReportViewPages")]
         public async Task<IActionResult> GetReportViewPages()
@@ -1362,8 +1412,8 @@ namespace INTEL_API.Controllers
                 {
                     var query = @"
                 INSERT INTO SchoolManagement.TeachersAssesment 
-                (StudentName, ClassID, TEST1, TEST2, GROUPWORK, HOMEWORK, CLASSTEST, TOTAL_X, EXAMS_SCORE, Y, X_Y, POSITION, UserID)
-                VALUES (@StudentName, @ClassID, @TEST1, @TEST2, @GROUPWORK, @HOMEWORK, @CLASSTEST, @TOTAL_X, @EXAMS_SCORE, @Y, @X_Y, @POSITION, @UserID)";
+                (StudentName, ClassID, TEST1, TEST2, GROUPWORK, HOMEWORK, CLASSTEST, TOTAL_X, EXAMS_SCORE, Y, X_Y, POSITION, UserID, TermID)
+                VALUES (@StudentName, @ClassID, @TEST1, @TEST2, @GROUPWORK, @HOMEWORK, @CLASSTEST, @TOTAL_X, @EXAMS_SCORE, @Y, @X_Y, @POSITION, @UserID, @TermID)";
 
                     var parameters = new
                     {
@@ -1379,7 +1429,8 @@ namespace INTEL_API.Controllers
                         model.Y,
                         model.X_Y,
                         model.POSITION,
-                        model.UserID
+                        model.UserID,
+                        model.TermID
                     };
 
                     connection.Execute(query, parameters);

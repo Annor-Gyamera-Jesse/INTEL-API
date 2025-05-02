@@ -19,6 +19,9 @@
         public string LearnerEntryBehavior { get; set; }
         public string SequenceofLesson { get; set; }
         public string ClassID { get; set; }
-        public DateTime WeekEnding { get; set; } // Assuming Week_Ending is a DateTime
+        public DateTime WeekEnding { get; set; }
+        public int TermID { get; set; }
+        public DateTime Time_Period { get; set; }
+        public DateTime LessonNoteDate { get; set; }
     }
 }
