@@ -1864,5 +1864,83 @@ namespace INTEL_API.Controllers
             return Ok(new { message = "Photo record inserted successfully." });
         }
 
+        [HttpGet("GetClassIDs")]
+        public async Task<IActionResult> GetClassIDs()
+        {
+            try
+            {
+                List<string> classIds = new();
+                var connStr = _configuration.GetConnectionString("DefaultConnection");
+
+                using (SqlConnection conn = new SqlConnection(connStr))
+                {
+                    await conn.OpenAsync();
+                    var cmd = new SqlCommand("SELECT ClassID FROM SchoolManagement.Class", conn);
+                    var reader = await cmd.ExecuteReaderAsync();
+
+                    while (await reader.ReadAsync())
+                    {
+                        classIds.Add(reader["ClassID"].ToString());
+                    }
+                }
+
+                return Ok(classIds);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Internal server error: {ex.Message}");
+            }
+        }
+
+
+        [HttpGet("GetClassTimetable")]
+        public async Task<IActionResult> GetClassTimetable([FromQuery] string classId)
+        {
+            var timetable = new List<object>();
+            var connStr = _configuration.GetConnectionString("DefaultConnection");
+
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                await conn.OpenAsync();
+                var cmd = new SqlCommand(@"
+            SELECT 
+                s.ClassID,
+                d.DayName AS Day,
+                c.SchoolCourse AS Subject,
+                s.SubjectStartTime AS StartTime,
+                s.SubjectEndTime AS EndTime,
+                CASE 
+                    WHEN s.BeforeFirstBreak = 1 THEN 'BeforeFirstBreak'
+                    WHEN s.AfterFirstBreak = 1 THEN 'AfterFirstBreak'
+                    WHEN s.AfterSecondBreak = 1 THEN 'AfterSecondBreak'
+                    ELSE 'Unknown'
+                END AS Period
+            FROM SchoolManagement.StudentTimetable_Schedule s
+            INNER JOIN SchoolManagement.SchoolCourse c ON s.SCID = c.SCID
+            INNER JOIN SchoolManagement.StudentTimetable_Days d ON s.DayID = d.DayID
+            WHERE s.ClassID = @ClassID
+            ORDER BY d.DayID, s.SubjectStartTime", conn);
+
+                cmd.Parameters.AddWithValue("@ClassID", classId);
+                var reader = await cmd.ExecuteReaderAsync();
+
+                while (await reader.ReadAsync())
+                {
+                    timetable.Add(new
+                    {
+                        ClassID = reader["ClassID"].ToString(),
+                        Day = reader["Day"].ToString(),
+                        Period = reader["Period"].ToString(),
+                        Subject = reader["Subject"].ToString(),
+                        StartTime = Convert.ToDateTime(reader["StartTime"]),
+                        EndTime = Convert.ToDateTime(reader["EndTime"])
+                    });
+                }
+            }
+
+            return Ok(timetable);
+        }
+
+
     }
 }
