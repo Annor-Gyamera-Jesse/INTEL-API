@@ -2,6 +2,10 @@
 using INTEL_API.ViewModels;
 using INTEL_API.ViewModels.LEAVE_OF_ABSENCE;
 using INTEL_API.ViewModels.LEAVE_OF_ABSENCE.INTEL_API.ViewModels;
+using INTEL_API.ViewModels.PhotoRecord;
+using INTEL_API.ViewModels.PhotoRecordVm;
+using INTEL_API.ViewModels.SchoolTerm;
+using INTEL_API.ViewModels.StudentInfoVm;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
@@ -331,6 +335,7 @@ namespace INTEL_API.Controllers
             return Ok(lessonNotes);
         }
 
+        /*NOT IN USE*/
         [HttpPost("postLessonNote")]
         public async Task<IActionResult> PostLessonNote([FromBody] LessonNoteViewModel lessonNote)
         {
@@ -376,6 +381,7 @@ namespace INTEL_API.Controllers
         }
 
         //thi is the new lessonnote api
+        //thi is the new lessonnote api
         [HttpPost("PostTEACHERSLESSONNOTES")]
         public async Task<IActionResult> PostTEACHERSLESSONNOTES([FromBody] TeachersLessonNoteViewModel lessonNote)
         {
@@ -394,13 +400,13 @@ namespace INTEL_API.Controllers
          TeachingLearningResources, TeachingLearningResourcePreparationNotes, 
          SourcesLearningResources, LearningGroup, LearnerExpectation, 
          ImportantGradeExpectation, LearningOutcomes, FormofAssessment, 
-         LearnerEntryBehavior, SequenceofLesson, ClassID, Week_Ending, Status)
+         LearnerEntryBehavior, SequenceofLesson, ClassID, Week_Ending, Status, TermID, Time_Period, LessonNoteDate)
         VALUES 
         (@UserId, @SchoolCourse, @Strand, @SubStrand, @ContentStandard, @Indicator, 
          @TeachingLearningResources, @TeachingLearningResourcePreparationNotes, 
          @SourcesLearningResources, @LearningGroup, @LearnerExpectation, 
          @ImportantGradeExpectation, @LearningOutcomes, @FormofAssessment, 
-         @LearnerEntryBehavior, @SequenceofLesson, @ClassID, @Week_Ending, @Status)";
+         @LearnerEntryBehavior, @SequenceofLesson, @ClassID, @Week_Ending, @Status, @TermID, @Time_Period, @LessonNoteDate)";
 
                 using (var command = new SqlCommand(query, connection))
                 {
@@ -423,6 +429,9 @@ namespace INTEL_API.Controllers
                     command.Parameters.AddWithValue("@ClassID", lessonNote.ClassID);
                     command.Parameters.AddWithValue("@Week_Ending", lessonNote.WeekEnding);
                     command.Parameters.AddWithValue("@Status", 1); // Every new post has status = 1 thats new
+                    command.Parameters.AddWithValue("@TermID", lessonNote.TermID);
+                    command.Parameters.AddWithValue("@Time_Period", lessonNote.Time_Period);                    
+                    command.Parameters.AddWithValue("@LessonNoteDate", lessonNote.LessonNoteDate);
 
                     try
                     {
@@ -437,7 +446,6 @@ namespace INTEL_API.Controllers
                 }
             }
         }
-
 
 
         // Endpoint to get roles for a specific user
@@ -882,7 +890,7 @@ namespace INTEL_API.Controllers
                                 VacationDate = reader.IsDBNull(4) ? (DateTime?)null : reader.GetDateTime(4),
                                 PromotedTo = reader.GetString(5),
                                 NumberOnRoll = reader.GetInt32(6),
-                                Term = reader.GetString(7),
+                                TermID = reader.GetInt32(7),
                                 Position = reader.GetString(8),
                                 NextTermsBegins = reader.IsDBNull(9) ? (DateTime?)null : reader.GetDateTime(9),
                                 AttendanceOut = reader.GetInt32(10),
@@ -1091,8 +1099,43 @@ namespace INTEL_API.Controllers
             }
         }
 
+        /*END-POINT TO GET ALL SCHOOL TERMS*/
+        [HttpGet("GetAllTerms")]
+        public IActionResult GetAllTerms()
+        {
+            var terms = new List<SchoolTerm>();
 
+            try
+            {
+                using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
+                {
+                    string query = "SELECT TermID, Term FROM SchoolManagement.SchoolTerm";
 
+                    using (var command = new SqlCommand(query, connection))
+                    {
+                        connection.Open();
+                        using (var reader = command.ExecuteReader())
+                        {
+                            while (reader.Read())
+                            {
+                                terms.Add(new SchoolTerm
+                                {
+                                    TermID = Convert.ToInt32(reader["TermID"]),
+                                    Term = reader["Term"].ToString()
+                                });
+                            }
+                        }
+                    }
+                }
+
+                return Ok(terms);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Error fetching terms: " + ex.Message);
+            }
+        }
+        
         // Endpoint to get all report view pages
         [HttpGet("ReportViewPages")]
         public async Task<IActionResult> GetReportViewPages()
@@ -1135,45 +1178,69 @@ namespace INTEL_API.Controllers
             {
                 await connection.OpenAsync();
 
-                using (var command = new SqlCommand(
-                    "INSERT INTO SchoolManagement.SchoolExams (StudentName, ClassName, AcademicYear, VacationDate, PromotedTo, NumberOnRoll, Term, " +
-                    "Position, NextTermsBegins, AttendanceOut, AttendanceIn, SchoolCourse, ClassScore, ExamsScore, TotalScore, SubjectsPositions, " +
-                    "Grade, TeachersRemarks, Conduct, HeadmasterRemark, SchoolInformation, TeachersSignature, HeadMasterSignature, UserID) " +
-                    "VALUES (@StudentName, @ClassName, @AcademicYear, @VacationDate, @PromotedTo, @NumberOnRoll, @Term, @Position, @NextTermsBegins, " +
-                    "@AttendanceOut, @AttendanceIn, @SchoolCourse, @ClassScore, @ExamsScore, @TotalScore, @SubjectsPositions, @Grade, @TeachersRemarks, " +
-                    "@Conduct, @HeadmasterRemark, @SchoolInformation, @TeachersSignature, @HeadMasterSignature, @UserID)",
-                    connection))
+                using (var transaction = connection.BeginTransaction())
                 {
-                    command.Parameters.AddWithValue("@StudentName", schoolExam.StudentName);
-                    command.Parameters.AddWithValue("@ClassName", schoolExam.ClassName);
-                    command.Parameters.AddWithValue("@AcademicYear", schoolExam.AcademicYear);
-                    command.Parameters.AddWithValue("@VacationDate", schoolExam.VacationDate);
-                    command.Parameters.AddWithValue("@PromotedTo", schoolExam.PromotedTo);
-                    command.Parameters.AddWithValue("@NumberOnRoll", schoolExam.NumberOnRoll);
-                    command.Parameters.AddWithValue("@Term", schoolExam.Term);
-                    command.Parameters.AddWithValue("@Position", schoolExam.Position);
-                    command.Parameters.AddWithValue("@NextTermsBegins", schoolExam.NextTermsBegins);
-                    command.Parameters.AddWithValue("@AttendanceOut", schoolExam.AttendanceOut);
-                    command.Parameters.AddWithValue("@AttendanceIn", schoolExam.AttendanceIn);
-                    command.Parameters.AddWithValue("@SchoolCourse", schoolExam.SchoolCourse);
-                    command.Parameters.AddWithValue("@ClassScore", schoolExam.ClassScore);
-                    command.Parameters.AddWithValue("@ExamsScore", schoolExam.ExamsScore);
-                    command.Parameters.AddWithValue("@TotalScore", schoolExam.TotalScore);
-                    command.Parameters.AddWithValue("@SubjectsPositions", schoolExam.SubjectsPositions);
-                    command.Parameters.AddWithValue("@Grade", schoolExam.Grade);
-                    command.Parameters.AddWithValue("@TeachersRemarks", schoolExam.TeachersRemarks);
-                    command.Parameters.AddWithValue("@Conduct", schoolExam.Conduct);
-                    command.Parameters.AddWithValue("@HeadmasterRemark", schoolExam.HeadmasterRemark);
-                    command.Parameters.AddWithValue("@SchoolInformation", schoolExam.SchoolInformation);
-                    command.Parameters.AddWithValue("@TeachersSignature", schoolExam.TeachersSignature);
-                    command.Parameters.AddWithValue("@HeadMasterSignature", schoolExam.HeadMasterSignature);
-                    command.Parameters.AddWithValue("@UserID", schoolExam.UserId);
-                    await command.ExecuteNonQueryAsync();
-                }
+                    try
+                    {
+                        // Insert exam record
+                        using (var command = new SqlCommand(
+                            "INSERT INTO SchoolManagement.SchoolExams (StudentName, ClassName, AcademicYear, VacationDate, PromotedTo, NumberOnRoll, TermID, " +
+                            "Position, NextTermsBegins, AttendanceOut, AttendanceIn, SchoolCourse, ClassScore, ExamsScore, TotalScore, SubjectsPositions, " +
+                            "Grade, TeachersRemarks, Conduct, HeadmasterRemark, SchoolInformation, TeachersSignature, HeadMasterSignature, UserID) " +
+                            "VALUES (@StudentName, @ClassName, @AcademicYear, @VacationDate, @PromotedTo, @NumberOnRoll, @TermID, @Position, @NextTermsBegins, " +
+                            "@AttendanceOut, @AttendanceIn, @SchoolCourse, @ClassScore, @ExamsScore, @TotalScore, @SubjectsPositions, @Grade, @TeachersRemarks, " +
+                            "@Conduct, @HeadmasterRemark, @SchoolInformation, @TeachersSignature, @HeadMasterSignature, @UserID)",
+                            connection, transaction))
+                        {
+                            command.Parameters.AddWithValue("@StudentName", schoolExam.StudentName);
+                            command.Parameters.AddWithValue("@ClassName", schoolExam.ClassName);
+                            command.Parameters.AddWithValue("@AcademicYear", schoolExam.AcademicYear);
+                            command.Parameters.AddWithValue("@VacationDate", (object)schoolExam.VacationDate ?? DBNull.Value);
+                            command.Parameters.AddWithValue("@PromotedTo", schoolExam.PromotedTo);
+                            command.Parameters.AddWithValue("@NumberOnRoll", schoolExam.NumberOnRoll);
+                            command.Parameters.AddWithValue("@TermID", schoolExam.TermID);
+                            command.Parameters.AddWithValue("@Position", schoolExam.Position);
+                            command.Parameters.AddWithValue("@NextTermsBegins", (object)schoolExam.NextTermsBegins ?? DBNull.Value);
+                            command.Parameters.AddWithValue("@AttendanceOut", (object)schoolExam.AttendanceOut ?? DBNull.Value);
+                            command.Parameters.AddWithValue("@AttendanceIn", (object)schoolExam.AttendanceIn ?? DBNull.Value);
+                            command.Parameters.AddWithValue("@SchoolCourse", schoolExam.SchoolCourse);
+                            command.Parameters.AddWithValue("@ClassScore", schoolExam.ClassScore);
+                            command.Parameters.AddWithValue("@ExamsScore", schoolExam.ExamsScore);
+                            command.Parameters.AddWithValue("@TotalScore", schoolExam.TotalScore);
+                            command.Parameters.AddWithValue("@SubjectsPositions", schoolExam.SubjectsPositions);
+                            command.Parameters.AddWithValue("@Grade", schoolExam.Grade);
+                            command.Parameters.AddWithValue("@TeachersRemarks", schoolExam.TeachersRemarks);
+                            command.Parameters.AddWithValue("@Conduct", schoolExam.Conduct);
+                            command.Parameters.AddWithValue("@HeadmasterRemark", (object)schoolExam.HeadmasterRemark ?? DBNull.Value);
+                            command.Parameters.AddWithValue("@SchoolInformation", (object)schoolExam.SchoolInformation ?? DBNull.Value);
+                            command.Parameters.AddWithValue("@TeachersSignature", (object)schoolExam.TeachersSignature ?? DBNull.Value);
+                            command.Parameters.AddWithValue("@HeadMasterSignature", (object)schoolExam.HeadMasterSignature ?? DBNull.Value);
+                            command.Parameters.AddWithValue("@UserID", schoolExam.UserId);
+                            await command.ExecuteNonQueryAsync();
+                        }
 
-                return Ok("School exam added successfully");
+                        // Update student class
+                        using (var updateCommand = new SqlCommand(
+                            "UPDATE SchoolManagement.Students SET ClassID = @PromotedTo WHERE StudentFirstName + ' ' + StudentLastName = @StudentName",
+                            connection, transaction))
+                        {
+                            updateCommand.Parameters.AddWithValue("@PromotedTo", schoolExam.PromotedTo);
+                            updateCommand.Parameters.AddWithValue("@StudentName", schoolExam.StudentName);
+                            await updateCommand.ExecuteNonQueryAsync();
+                        }
+
+                        transaction.Commit();
+                        return Ok("School exam added and student promoted successfully.");
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        return StatusCode(500, $"Error: {ex.Message}");
+                    }
+                }
             }
         }
+
 
         // Endpoint to add a new student attendance
         [HttpPost("AddStudentAttendance")]
@@ -1362,8 +1429,8 @@ namespace INTEL_API.Controllers
                 {
                     var query = @"
                 INSERT INTO SchoolManagement.TeachersAssesment 
-                (StudentName, ClassID, TEST1, TEST2, GROUPWORK, HOMEWORK, CLASSTEST, TOTAL_X, EXAMS_SCORE, Y, X_Y, POSITION, UserID)
-                VALUES (@StudentName, @ClassID, @TEST1, @TEST2, @GROUPWORK, @HOMEWORK, @CLASSTEST, @TOTAL_X, @EXAMS_SCORE, @Y, @X_Y, @POSITION, @UserID)";
+                (StudentName, ClassID, TEST1, TEST2, GROUPWORK, HOMEWORK, CLASSTEST, TOTAL_X, EXAMS_SCORE, Y, X_Y, POSITION, UserID, TermID)
+                VALUES (@StudentName, @ClassID, @TEST1, @TEST2, @GROUPWORK, @HOMEWORK, @CLASSTEST, @TOTAL_X, @EXAMS_SCORE, @Y, @X_Y, @POSITION, @UserID, @TermID)";
 
                     var parameters = new
                     {
@@ -1379,7 +1446,8 @@ namespace INTEL_API.Controllers
                         model.Y,
                         model.X_Y,
                         model.POSITION,
-                        model.UserID
+                        model.UserID,
+                        model.TermID
                     };
 
                     connection.Execute(query, parameters);
@@ -1614,14 +1682,17 @@ namespace INTEL_API.Controllers
                 }
             }
         }
-
+        /**/
         [HttpGet("GetTerms")]
         public IActionResult GetTerms()
         {
             using (IDbConnection db = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
             {
-                var query = "SELECT Term FROM SchoolManagement.SchoolTerm";
-                var terms = db.Query<string>(query);
+                var query = "SELECT TermID, Term FROM SchoolManagement.SchoolTerm";
+                var terms = db.Query(query).Select(t => new {
+                    TermID = t.TermID,
+                    Term = t.Term
+                });
                 return Ok(terms);
             }
         }
@@ -1730,6 +1801,68 @@ namespace INTEL_API.Controllers
             return Ok(leaves);
         }
 
+        [HttpGet("GetsStudentById/{studentId}")]
+        public async Task<IActionResult> GetsStudentById(int studentId)
+        {
+            using var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+            var query = @"SELECT StudentID, (StudentFirstName + ' ' + StudentLastName) AS FullName, ClassID 
+                  FROM SchoolManagement.Students WHERE StudentID = @studentId";
+
+            var student = await connection.QueryFirstOrDefaultAsync<StudentInfoVm>(query, new { studentId });
+
+            if (student == null)
+                return NotFound("Student not found");
+
+            return Ok(student);
+        }
+
+        [HttpGet("GetPhotoRecords")]
+        public async Task<IActionResult> GetPhotoRecords(int studentId, int termId)
+        {
+            using var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+            var query = @"SELECT PhotoTitle, PhotoDescription, PhotoData, UploadDate 
+                  FROM SchoolManagement.PhotoRecords 
+                  WHERE StudentID = @studentId AND TermID = @termId";
+
+            var records = await connection.QueryAsync<PhotoRecordVm>(query, new { studentId, termId });
+            return Ok(records);
+        }
+
+        /*InsertPhotoRecord endpoin*/
+        [HttpPost("InsertPhotoRecord")]
+        public async Task<IActionResult> InsertPhotoRecord([FromBody] PhotoRecord photoDto)
+        {
+            if (photoDto == null || string.IsNullOrEmpty(photoDto.PhotoData))
+                return BadRequest("Invalid data submitted.");
+
+            var photoBytes = Convert.FromBase64String(photoDto.PhotoData);
+
+            var connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (var connection = new SqlConnection(connectionString))
+            {
+                var query = @"
+            INSERT INTO SchoolManagement.PhotoRecords
+            (Class, StudentName, StudentID, PhotoTitle, PhotoDescription, PhotoData, TermID, UserID)
+            VALUES (@Class, @StudentName, @StudentID, @PhotoTitle, @PhotoDescription, @PhotoData, @TermID, @UserID)";
+
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@Class", photoDto.Class);
+                    command.Parameters.AddWithValue("@StudentName", photoDto.StudentName);
+                    command.Parameters.AddWithValue("@StudentID", photoDto.StudentId);
+                    command.Parameters.AddWithValue("@PhotoTitle", photoDto.PhotoTitle);
+                    command.Parameters.AddWithValue("@PhotoDescription", photoDto.PhotoDescription);
+                    command.Parameters.AddWithValue("@PhotoData", photoBytes);
+                    command.Parameters.AddWithValue("@TermID", photoDto.TermID);
+                    command.Parameters.AddWithValue("@UserID", photoDto.UserID);
+
+                    await connection.OpenAsync();
+                    await command.ExecuteNonQueryAsync();
+                }
+            }
+
+            return Ok(new { message = "Photo record inserted successfully." });
+        }
 
     }
 }

@@ -10,7 +10,7 @@
         public DateTime? VacationDate { get; set; } // Nullable DateTime
         public string PromotedTo { get; set; }
         public int NumberOnRoll { get; set; }
-        public string Term { get; set; }
+        public int TermID { get; set; }
         public string Position { get; set; }
         public DateTime? NextTermsBegins { get; set; } // Nullable DateTime
         public int AttendanceOut { get; set; }

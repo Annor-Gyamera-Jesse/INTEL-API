@@ -16,5 +16,6 @@
         public decimal X_Y { get; set; }
         public int POSITION { get; set; }
         public int UserID { get; set; }
+        public int TermID { get; set; }
     }
 }
