@@ -2,6 +2,7 @@
 using INTEL_API.ViewModels;
 using INTEL_API.ViewModels.LEAVE_OF_ABSENCE;
 using INTEL_API.ViewModels.LEAVE_OF_ABSENCE.INTEL_API.ViewModels;
+using INTEL_API.ViewModels.PhotoRecord;
 using INTEL_API.ViewModels.PhotoRecordVm;
 using INTEL_API.ViewModels.SchoolTerm;
 using INTEL_API.ViewModels.StudentInfoVm;
@@ -1681,7 +1682,7 @@ namespace INTEL_API.Controllers
                 }
             }
         }
-
+        /**/
         [HttpGet("GetTerms")]
         public IActionResult GetTerms()
         {
@@ -1826,5 +1827,42 @@ namespace INTEL_API.Controllers
             var records = await connection.QueryAsync<PhotoRecordVm>(query, new { studentId, termId });
             return Ok(records);
         }
+
+        /*InsertPhotoRecord endpoin*/
+        [HttpPost("InsertPhotoRecord")]
+        public async Task<IActionResult> InsertPhotoRecord([FromBody] PhotoRecord photoDto)
+        {
+            if (photoDto == null || string.IsNullOrEmpty(photoDto.PhotoData))
+                return BadRequest("Invalid data submitted.");
+
+            var photoBytes = Convert.FromBase64String(photoDto.PhotoData);
+
+            var connectionString = _configuration.GetConnectionString("DefaultConnection");
+            using (var connection = new SqlConnection(connectionString))
+            {
+                var query = @"
+            INSERT INTO SchoolManagement.PhotoRecords
+            (Class, StudentName, StudentID, PhotoTitle, PhotoDescription, PhotoData, TermID, UserID)
+            VALUES (@Class, @StudentName, @StudentID, @PhotoTitle, @PhotoDescription, @PhotoData, @TermID, @UserID)";
+
+                using (var command = new SqlCommand(query, connection))
+                {
+                    command.Parameters.AddWithValue("@Class", photoDto.Class);
+                    command.Parameters.AddWithValue("@StudentName", photoDto.StudentName);
+                    command.Parameters.AddWithValue("@StudentID", photoDto.StudentId);
+                    command.Parameters.AddWithValue("@PhotoTitle", photoDto.PhotoTitle);
+                    command.Parameters.AddWithValue("@PhotoDescription", photoDto.PhotoDescription);
+                    command.Parameters.AddWithValue("@PhotoData", photoBytes);
+                    command.Parameters.AddWithValue("@TermID", photoDto.TermID);
+                    command.Parameters.AddWithValue("@UserID", photoDto.UserID);
+
+                    await connection.OpenAsync();
+                    await command.ExecuteNonQueryAsync();
+                }
+            }
+
+            return Ok(new { message = "Photo record inserted successfully." });
+        }
+
     }
 }
