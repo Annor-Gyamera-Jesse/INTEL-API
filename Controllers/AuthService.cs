@@ -2,7 +2,9 @@
 using INTEL_API.ViewModels;
 using INTEL_API.ViewModels.LEAVE_OF_ABSENCE;
 using INTEL_API.ViewModels.LEAVE_OF_ABSENCE.INTEL_API.ViewModels;
+using INTEL_API.ViewModels.PhotoRecordVm;
 using INTEL_API.ViewModels.SchoolTerm;
+using INTEL_API.ViewModels.StudentInfoVm;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
@@ -1798,6 +1800,31 @@ namespace INTEL_API.Controllers
             return Ok(leaves);
         }
 
+        [HttpGet("GetsStudentById/{studentId}")]
+        public async Task<IActionResult> GetsStudentById(int studentId)
+        {
+            using var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+            var query = @"SELECT StudentID, (StudentFirstName + ' ' + StudentLastName) AS FullName, ClassID 
+                  FROM SchoolManagement.Students WHERE StudentID = @studentId";
 
+            var student = await connection.QueryFirstOrDefaultAsync<StudentInfoVm>(query, new { studentId });
+
+            if (student == null)
+                return NotFound("Student not found");
+
+            return Ok(student);
+        }
+
+        [HttpGet("GetPhotoRecords")]
+        public async Task<IActionResult> GetPhotoRecords(int studentId, int termId)
+        {
+            using var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+            var query = @"SELECT PhotoTitle, PhotoDescription, PhotoData, UploadDate 
+                  FROM SchoolManagement.PhotoRecords 
+                  WHERE StudentID = @studentId AND TermID = @termId";
+
+            var records = await connection.QueryAsync<PhotoRecordVm>(query, new { studentId, termId });
+            return Ok(records);
+        }
     }
 }
