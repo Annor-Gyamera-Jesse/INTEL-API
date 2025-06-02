@@ -1280,8 +1280,8 @@ namespace INTEL_API.Controllers
                 foreach (var studentAttendance in studentAttendances)
                 {
                     using (var command = new SqlCommand(
-                        "INSERT INTO SchoolManagement.StudentsAttendance (StudentFirstName, StudentLastName, ClassID, EnableSwitch, UserID, RecDateCreated) " +
-                        "VALUES (@StudentFirstName, @StudentLastName, @ClassID, @EnableSwitch, @UserID, GETDATE())",
+                        "INSERT INTO SchoolManagement.StudentsAttendance (StudentFirstName, StudentLastName, ClassID, EnableSwitch, UserID, TermID, RecDateCreated) " +
+                        "VALUES (@StudentFirstName, @StudentLastName, @ClassID, @EnableSwitch, @UserID, @TermID, GETDATE())",
                         connection))
                     {
                         command.Parameters.AddWithValue("@StudentFirstName", studentAttendance.StudentFirstName);
@@ -1289,6 +1289,7 @@ namespace INTEL_API.Controllers
                         command.Parameters.AddWithValue("@ClassID", studentAttendance.ClassID);
                         command.Parameters.AddWithValue("@EnableSwitch", studentAttendance.EnableSwitch);
                         command.Parameters.AddWithValue("@UserID", studentAttendance.UserId);
+                        command.Parameters.AddWithValue("@TermID", studentAttendance.TermID);
 
                         await command.ExecuteNonQueryAsync();
                     }

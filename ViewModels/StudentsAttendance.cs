@@ -8,5 +8,6 @@
         public string StudentLastName { get; set; }
         public string ClassID { get; set; }
         public bool EnableSwitch { get; set; }
+        public int TermID { get; set; }
     }
 }
