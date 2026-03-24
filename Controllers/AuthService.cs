@@ -14,6 +14,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.Net.Http.Headers;
 using System.Text;
+using static INTEL_API.ViewModels.Directors_View.DirectorsViewClass;
 
 
 namespace INTEL_API.Controllers
@@ -1468,44 +1469,41 @@ namespace INTEL_API.Controllers
         [HttpGet("GetFeeDetails/{studentId}")]
         public async Task<IActionResult> GetFeeDetails(int studentId)
         {
-            // Create the SQL query to fetch the fee details for the given StudentID
             string sqlQuery = @"
-                SELECT 
-                    f.FeeID,
-                    f.StudentID,
-                    f.StudentName,
-                    f.FeeTypeName,
-                    f.ClassID,
-                    f.AmountPaid,
-                    f.AmountLeft,
-                    f.PaymentDate,
-                    f.DueDate,
-                    f.Note
-                FROM SchoolManagement.StudentFees f
-                WHERE f.StudentID = @StudentID
-            ";
+        SELECT 
+            f.FeeID,
+            f.StudentID,
+            f.StudentName,
+            f.FeeTypeName,
+            f.ClassID,
+            f.AmountPaid,
+            f.AmountLeft,
+            f.PaymentDate,
+            f.DueDate,
+            f.Note,
+            f.TermID,
+            t.Term
+        FROM SchoolManagement.StudentFees f
+        LEFT JOIN SchoolManagement.SchoolTerm t ON f.TermID = t.TermID
+        WHERE f.StudentID = @StudentID
+    ";
 
             try
             {
-                // Open the database connection
                 using (var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
                 {
-                    // Query the database and retrieve the fee details for the student
-                    var feeDetails = await connection.QueryAsync<StudentFee>(sqlQuery, new { StudentID = studentId });
+                    var feeDetails = await connection.QueryAsync(sqlQuery, new { StudentID = studentId });
 
-                    // If no records found, return a NotFound response
                     if (feeDetails == null || !feeDetails.Any())
                     {
                         return NotFound($"No fee records found for student with ID {studentId}");
                     }
 
-                    // Return the fee details as a response
                     return Ok(feeDetails);
                 }
             }
             catch (Exception ex)
             {
-                // Return a 500 error if something goes wrong
                 return StatusCode(500, $"Internal server error: {ex.Message}");
             }
         }
@@ -1942,6 +1940,229 @@ namespace INTEL_API.Controllers
             return Ok(timetable);
         }
 
+        /*for director to view his money*/
+        // ────────────────────────────────────────────────
+        //  Tab 1: All Fees Overview – Money Flow Dashboard
+        // ────────────────────────────────────────────────
+        [HttpGet("fee-summary/all")]
+        public async Task<IActionResult> GetFeeSummaryAll([FromQuery] int? termId = null)
+        {
+            try
+            {
+                // Default to current term if not provided
+                if (!termId.HasValue)
+                {
+                    var current = await GetCurrentTermAsync();
+                    if (current == null)
+                    {
+                        // FIX: Return empty data instead of 400 so the app doesn't crash
+                        return Ok(new
+                        {
+                            data = new List<object>(),
+                            grandTotalExpected = 0,
+                            grandTotalPaid = 0,
+                            grandTotalOwing = 0,
+                            message = "No active term found. Please set a current term."
+                        });
+                    }
+                    termId = current.TermID;
+                }
 
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var sql = @"
+    SELECT 
+        ft.FeeTypeName,
+        ft.ClassID,
+        COUNT(DISTINCT s.StudentID)                          AS TotalStudents,
+        SUM(ft.Amount * 1.0)                                 AS ExpectedAmount,
+        COALESCE(SUM(sf.TotalPaid), 0)                       AS TotalPaid,
+        SUM(ft.Amount) - COALESCE(SUM(sf.TotalPaid), 0)      AS TotalOwing,
+        ROUND(100.0 * COALESCE(SUM(sf.TotalPaid), 0) / NULLIF(SUM(ft.Amount), 0), 2) 
+                                                             AS CollectionPercentage
+    FROM SchoolManagement.FeeTypes ft
+    INNER JOIN SchoolManagement.Students s 
+        ON s.ClassID = ft.ClassID 
+       AND s.EnableSwitch = 1
+    LEFT JOIN (
+        SELECT FeeTypeID, SUM(AmountPaid) AS TotalPaid
+        FROM SchoolManagement.StudentFees
+        WHERE TermID = @TermID
+        GROUP BY FeeTypeID
+    ) sf ON sf.FeeTypeID = ft.FeeTypeID
+    GROUP BY ft.FeeTypeName, ft.ClassID
+    ORDER BY ft.ClassID, ft.FeeTypeName";
+
+                var results = await conn.QueryAsync<FeeSummary>(sql, new { TermID = termId.Value });
+
+                var response = new
+                {
+                    data = results,
+                    grandTotalExpected = results.Sum(x => x.ExpectedAmount),
+                    grandTotalPaid = results.Sum(x => x.TotalPaid),
+                    grandTotalOwing = results.Sum(x => x.TotalOwing)
+                };
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Failed to load fee summary", error = ex.Message });
+            }
+        }
+
+        // ────────────────────────────────────────────────
+        //  Tab 2: Owing Breakdown – Classes & Fee Types Owing
+        // ────────────────────────────────────────────────
+        [HttpGet("fee-summary/owing")]
+        public async Task<IActionResult> GetFeeSummaryOwing([FromQuery] int? termId = null)
+        {
+            try
+            {
+                if (!termId.HasValue)
+                {
+                    var current = await GetCurrentTermAsync();
+                    if (current == null)
+                    {
+                        // FIX: Return empty data instead of 400 so the app doesn't crash
+                        return Ok(new
+                        {
+                            data = new List<object>(),
+                            totalOwingAcrossSchool = 0,
+                            message = "No active term found. Please set a current term."
+                        });
+                    }
+                    termId = current.TermID;
+                }
+
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var sql = @"
+    SELECT 
+        ft.ClassID,
+        ft.FeeTypeName,
+        COUNT(DISTINCT s.StudentID)                          AS TotalStudents,
+        SUM(ft.Amount * 1.0)                                 AS ExpectedAmount,
+        COALESCE(SUM(sf.TotalPaid), 0)                       AS TotalPaid,
+        SUM(ft.Amount) - COALESCE(SUM(sf.TotalPaid), 0)      AS TotalOwing,
+        COUNT(CASE WHEN sf.AmountLeft > 0 OR sf.AmountLeft IS NULL THEN 1 END) 
+                                                             AS OwingStudentsCount
+    FROM SchoolManagement.FeeTypes ft
+    INNER JOIN SchoolManagement.Students s 
+        ON s.ClassID = ft.ClassID 
+       AND s.EnableSwitch = 1
+    LEFT JOIN (
+        SELECT FeeTypeID, 
+               SUM(AmountPaid) AS TotalPaid,
+               MAX(AmountLeft) AS AmountLeft
+        FROM SchoolManagement.StudentFees
+        WHERE TermID = @TermID
+        GROUP BY FeeTypeID
+    ) sf ON sf.FeeTypeID = ft.FeeTypeID
+    WHERE (sf.AmountLeft > 0 OR sf.AmountLeft IS NULL)
+    GROUP BY ft.ClassID, ft.FeeTypeName
+    HAVING SUM(ft.Amount) - COALESCE(SUM(sf.TotalPaid), 0) > 0
+    ORDER BY TotalOwing DESC";
+
+                var results = await conn.QueryAsync<OwingSummary>(sql, new { TermID = termId.Value });
+
+                var response = new
+                {
+                    data = results,
+                    totalOwingAcrossSchool = results.Sum(x => x.TotalOwing)
+                };
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Failed to load owing summary", error = ex.Message });
+            }
+        }
+
+        // Returns the currently active term (IsCurrentTerm = 1)
+        // Returns null if no term is marked as current
+        private async Task<SchoolCurrentTerm> GetCurrentTermAsync()
+        {
+            try
+            {
+                using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+                var sql = @"
+    SELECT TOP 1
+        TermID,
+        Term,
+        IsCurrentTerm,
+        TermEndDate,
+        UserID,
+        RecDateCreated
+    FROM SchoolManagement.SchoolTerm
+    WHERE IsCurrentTerm = 1
+    ORDER BY TermID DESC;";  // latest active term if multiple (shouldn't happen)
+
+                var term = await conn.QueryFirstOrDefaultAsync<SchoolCurrentTerm>(sql);
+
+                return term;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error fetching current term: {ex.Message}");
+                return null;
+            }
+        }
+
+        [HttpGet("GetSchoolBankSummary")]
+        public async Task<IActionResult> GetDirectorBankSummary()
+        {
+            using var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+
+            // Current balance per payment method
+            var balances = await connection.QueryAsync(@"
+        SELECT 
+            MethodName,
+            SUM(AmountTransferred) AS TotalBalance
+        FROM SchoolManagement.Bank
+        GROUP BY MethodName
+    ");
+
+            // Full transaction history — deposits and withdrawals
+            var transactions = await connection.QueryAsync(@"
+        SELECT 
+            b.BankID,
+            b.MethodName,
+            b.AmountTransferred,
+            b.AmountInHand,
+            b.TransferDate,
+            b.Remarks,
+            b.UserID,
+            CASE 
+                WHEN b.AmountTransferred >= 0 THEN 'Deposit'
+                ELSE 'Withdrawal'
+            END AS TransactionType
+        FROM SchoolManagement.Bank b
+        ORDER BY b.TransferDate DESC
+    ");
+
+            // Summary totals
+            var summary = await connection.QueryFirstOrDefaultAsync(@"
+        SELECT 
+            ISNULL(SUM(CASE WHEN AmountTransferred > 0 THEN AmountTransferred ELSE 0 END), 0) AS TotalDeposits,
+            ISNULL(SUM(CASE WHEN AmountTransferred < 0 THEN ABS(AmountTransferred) ELSE 0 END), 0) AS TotalWithdrawals,
+            ISNULL(SUM(AmountTransferred), 0) AS NetBalance
+        FROM SchoolManagement.Bank
+    ");
+
+            return Ok(new
+            {
+                Summary = summary ?? new
+                {
+                    TotalDeposits = 0,
+                    TotalWithdrawals = 0,
+                    NetBalance = 0
+                },
+                Balances = balances ?? new List<object>(),
+                Transactions = transactions ?? new List<object>()
+            });
+        }
     }
 }
