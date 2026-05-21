@@ -15,6 +15,7 @@ using System.Data.SqlClient;
 using System.Net.Http.Headers;
 using System.Text;
 using static INTEL_API.ViewModels.Directors_View.DirectorsViewClass;
+using static INTEL_API.ViewModels.OTHERFEE.OtherFee;
 
 
 namespace INTEL_API.Controllers
@@ -76,8 +77,8 @@ namespace INTEL_API.Controllers
                             return Ok(new LoginResponse
                             {
                                 IsAuthorized = true,
-                                UserId = userId,  // Include UserId in the response
-                                UserName = request.UserName,  // Include UserName in the response
+                                UserId = userId,
+                                UserName = request.UserName,
                                 Role = roleName,
                                 ClassID = classID,
                                 MenuItem = menuItem,
@@ -241,7 +242,7 @@ namespace INTEL_API.Controllers
                             lessonNotes.Add(new LessonNoteStatusUpdateViewModel
                             {
                                 LessonNoteId = reader.GetInt32(0),
-                                Status = reader.GetString(1), // Assuming Status is an integer
+                                Status = reader.GetString(1),
                                 DateUpdated = reader.GetDateTime(2)
                             });
                         }
@@ -298,41 +299,36 @@ namespace INTEL_API.Controllers
         //this is was the old lessonNot post api
 
         [HttpGet("ApprovedLessonNotes")]
-        public async Task<IActionResult> GetApprovedLessonNotes()
+        public async Task<IActionResult> GetAllLessonNotes()
         {
             var connectionString = _configuration.GetConnectionString("DefaultConnection");
             using var connection = new SqlConnection(connectionString);
             await connection.OpenAsync();
-
             var query = @"
-        SELECT LessonnotesID,
-               UserId, 
-               CASE Status 
-                   WHEN 1 THEN 'New'
-                   WHEN 2 THEN 'Approved'
-                   WHEN 3 THEN 'Cancelled'
-               END AS Status,
-               UpdatedOn AS DateUpdated
-        FROM SchoolManagement.TEACHERSLESSONNOTES
-        WHERE Status = @ApprovedStatus
-        ORDER BY UpdatedOn DESC";
+            SELECT LessonnotesID,
+                   UserId, 
+                   CASE Status 
+                       WHEN 1 THEN 'New'
+                       WHEN 2 THEN 'Rejected'
+                       WHEN 3 THEN 'Accepted'
+                   END AS Status,
+                   UpdatedOn AS DateUpdated
+            FROM SchoolManagement.TEACHERSLESSONNOTES
+            ORDER BY UpdatedOn DESC";
 
             using var command = new SqlCommand(query, connection);
-            command.Parameters.AddWithValue("@ApprovedStatus", (int)LessonNoteStatus.Approved);
-
             var lessonNotes = new List<LessonNoteStatusUpdateViewModel>();
             using var reader = await command.ExecuteReaderAsync();
             while (await reader.ReadAsync())
             {
                 lessonNotes.Add(new LessonNoteStatusUpdateViewModel
                 {
-                    LessonNoteId = reader.GetInt32(0), // LessonnotesID
-                    UserId = reader.GetInt32(1),        // UserId
-                    Status = reader.GetString(2),       // Status (string)
-                    DateUpdated = reader.GetDateTime(3) // UpdatedOn
+                    LessonNoteId = reader.GetInt32(0),
+                    UserId = reader.GetInt32(1),
+                    Status = reader.GetString(2),
+                    DateUpdated = reader.GetDateTime(3)
                 });
             }
-
             return Ok(lessonNotes);
         }
 
@@ -382,7 +378,6 @@ namespace INTEL_API.Controllers
         }
 
         //thi is the new lessonnote api
-        //thi is the new lessonnote api
         [HttpPost("PostTEACHERSLESSONNOTES")]
         public async Task<IActionResult> PostTEACHERSLESSONNOTES([FromBody] TeachersLessonNoteViewModel lessonNote)
         {
@@ -431,7 +426,7 @@ namespace INTEL_API.Controllers
                     command.Parameters.AddWithValue("@Week_Ending", lessonNote.WeekEnding);
                     command.Parameters.AddWithValue("@Status", 1); // Every new post has status = 1 thats new
                     command.Parameters.AddWithValue("@TermID", lessonNote.TermID);
-                    command.Parameters.AddWithValue("@Time_Period", lessonNote.Time_Period);                    
+                    command.Parameters.AddWithValue("@Time_Period", lessonNote.Time_Period);
                     command.Parameters.AddWithValue("@LessonNoteDate", lessonNote.LessonNoteDate);
 
                     try
@@ -447,7 +442,6 @@ namespace INTEL_API.Controllers
                 }
             }
         }
-
 
         // Endpoint to get roles for a specific user
         [HttpGet("UserRoles/{userId}")]
@@ -1136,7 +1130,7 @@ namespace INTEL_API.Controllers
                 return StatusCode(500, "Error fetching terms: " + ex.Message);
             }
         }
-        
+
         // Endpoint to get all report view pages
         [HttpGet("ReportViewPages")]
         public async Task<IActionResult> GetReportViewPages()
@@ -1241,7 +1235,6 @@ namespace INTEL_API.Controllers
                 }
             }
         }
-
 
         // Endpoint to add a new student attendance
         [HttpPost("AddStudentAttendance")]
@@ -1416,7 +1409,6 @@ namespace INTEL_API.Controllers
             }
         }
 
-
         [HttpPost("SaveAssessment")]
         public IActionResult SaveAssessment([FromBody] TeachersAssessmentViewModel model)
         {
@@ -1462,7 +1454,6 @@ namespace INTEL_API.Controllers
                 return StatusCode(500, new { message = "An error occurred while saving the assessment.", error = ex.Message });
             }
         }
-
 
         /*Fees*/
         // Endpoint to get fee details for a student by StudentID
@@ -1563,7 +1554,6 @@ namespace INTEL_API.Controllers
             }
         }
 
-
         // Make Payment and Update StudentFees
         [HttpPost]
         [Route("MakePayment")]
@@ -1599,7 +1589,6 @@ namespace INTEL_API.Controllers
             }
         }
 
-        // Backend: Verify the Payment
         [HttpPost]
         [Route("verify-payment")]
         public async Task<IActionResult> VerifyPayment([FromBody] PaymentVerificationRequest request)
@@ -1619,7 +1608,7 @@ namespace INTEL_API.Controllers
                 if (verificationData?.status == "success")
                 {
                     // Payment was successful
-                    // Update your database with the payment status and transaction details
+                    // Update my database with the payment status and transaction details
                     return Ok(new { status = "success", message = "Payment successful" });
                 }
                 else
@@ -1630,7 +1619,6 @@ namespace INTEL_API.Controllers
             }
         }
 
-        // C# Example (ASP.NET Core)
         [HttpPost]
         [Route("create-payment")]
         public async Task<IActionResult> CreatePayment([FromBody] PaymentRequest request)
@@ -1647,14 +1635,14 @@ namespace INTEL_API.Controllers
                     amount = request.Amount * 100, // Paystack expects amounts in kobo
                     email = request.Email,
                     callback_url = "https://your-callback-url.com",
-                    // other necessary fields (like the transaction reference, etc.)
+                    // other necessary fields (like the transaction reference, etc.) thats in the future
                 };
 
                 var content = new StringContent(JsonConvert.SerializeObject(data), Encoding.UTF8, "application/json");
                 var response = await client.PostAsync(url, content);
                 var responseString = await response.Content.ReadAsStringAsync();
 
-                return Ok(responseString); // Send the response to your Flutter app
+                return Ok(responseString); // Send the response to Flutter app
             }
         }
 
@@ -1688,7 +1676,8 @@ namespace INTEL_API.Controllers
             using (IDbConnection db = new SqlConnection(_configuration.GetConnectionString("DefaultConnection")))
             {
                 var query = "SELECT TermID, Term FROM SchoolManagement.SchoolTerm";
-                var terms = db.Query(query).Select(t => new {
+                var terms = db.Query(query).Select(t => new
+                {
                     TermID = t.TermID,
                     Term = t.Term
                 });
@@ -1714,7 +1703,7 @@ namespace INTEL_API.Controllers
             }
         }
 
-        [HttpGet] //am not using this at the moment
+        [HttpGet] //i'm not using this at the moment
         [Route("GetExamReport")]
         public IActionResult GetExamReport(string studentName, string term)
         {
@@ -1755,7 +1744,7 @@ namespace INTEL_API.Controllers
 
             var result = await connection.ExecuteAsync(query, new
             {
-                leaveRequest.UserID,                
+                leaveRequest.UserID,
                 leaveRequest.LeaveType,
                 leaveRequest.StartDate,
                 leaveRequest.EndDate,
@@ -1955,7 +1944,7 @@ namespace INTEL_API.Controllers
                     var current = await GetCurrentTermAsync();
                     if (current == null)
                     {
-                        // FIX: Return empty data instead of 400 so the app doesn't crash
+                        //Return empty data instead of 400 so the app doesn't crash
                         return Ok(new
                         {
                             data = new List<object>(),
@@ -1971,27 +1960,27 @@ namespace INTEL_API.Controllers
                 using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
 
                 var sql = @"
-    SELECT 
-        ft.FeeTypeName,
-        ft.ClassID,
-        COUNT(DISTINCT s.StudentID)                          AS TotalStudents,
-        SUM(ft.Amount * 1.0)                                 AS ExpectedAmount,
-        COALESCE(SUM(sf.TotalPaid), 0)                       AS TotalPaid,
-        SUM(ft.Amount) - COALESCE(SUM(sf.TotalPaid), 0)      AS TotalOwing,
-        ROUND(100.0 * COALESCE(SUM(sf.TotalPaid), 0) / NULLIF(SUM(ft.Amount), 0), 2) 
-                                                             AS CollectionPercentage
-    FROM SchoolManagement.FeeTypes ft
-    INNER JOIN SchoolManagement.Students s 
-        ON s.ClassID = ft.ClassID 
-       AND s.EnableSwitch = 1
-    LEFT JOIN (
-        SELECT FeeTypeID, SUM(AmountPaid) AS TotalPaid
-        FROM SchoolManagement.StudentFees
-        WHERE TermID = @TermID
-        GROUP BY FeeTypeID
-    ) sf ON sf.FeeTypeID = ft.FeeTypeID
-    GROUP BY ft.FeeTypeName, ft.ClassID
-    ORDER BY ft.ClassID, ft.FeeTypeName";
+                    SELECT 
+                        ft.FeeTypeName,
+                        ft.ClassID,
+                        COUNT(DISTINCT s.StudentID)                          AS TotalStudents,
+                        SUM(ft.Amount * 1.0)                                 AS ExpectedAmount,
+                        COALESCE(SUM(sf.TotalPaid), 0)                       AS TotalPaid,
+                        SUM(ft.Amount) - COALESCE(SUM(sf.TotalPaid), 0)      AS TotalOwing,
+                        ROUND(100.0 * COALESCE(SUM(sf.TotalPaid), 0) / NULLIF(SUM(ft.Amount), 0), 2) 
+                                                                             AS CollectionPercentage
+                    FROM SchoolManagement.FeeTypes ft
+                    INNER JOIN SchoolManagement.Students s 
+                        ON s.ClassID = ft.ClassID 
+                       AND s.EnableSwitch = 1
+                    LEFT JOIN (
+                        SELECT FeeTypeID, SUM(AmountPaid) AS TotalPaid
+                        FROM SchoolManagement.StudentFees
+                        WHERE TermID = @TermID
+                        GROUP BY FeeTypeID
+                    ) sf ON sf.FeeTypeID = ft.FeeTypeID
+                    GROUP BY ft.FeeTypeName, ft.ClassID
+                    ORDER BY ft.ClassID, ft.FeeTypeName";
 
                 var results = await conn.QueryAsync<FeeSummary>(sql, new { TermID = termId.Value });
 
@@ -2024,11 +2013,11 @@ namespace INTEL_API.Controllers
                     var current = await GetCurrentTermAsync();
                     if (current == null)
                     {
-                        // FIX: Return empty data instead of 400 so the app doesn't crash
                         return Ok(new
                         {
                             data = new List<object>(),
                             totalOwingAcrossSchool = 0,
+                            termId = (int?)null,
                             message = "No active term found. Please set a current term."
                         });
                     }
@@ -2037,42 +2026,56 @@ namespace INTEL_API.Controllers
 
                 using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
 
+                // Use AmountLeft directly from StudentFees — it already includes carry-overs.
+                // Group by the student's CURRENT class (from StudentFees.ClassID) so promoted
+                // students are not double-counted across their old classes.
+                // We pick the LATEST fee row per student per fee type (MAX FeeID) to get the
+                // most up-to-date AmountLeft and avoid summing duplicates from carry-over inserts.
                 var sql = @"
-    SELECT 
-        ft.ClassID,
-        ft.FeeTypeName,
-        COUNT(DISTINCT s.StudentID)                          AS TotalStudents,
-        SUM(ft.Amount * 1.0)                                 AS ExpectedAmount,
-        COALESCE(SUM(sf.TotalPaid), 0)                       AS TotalPaid,
-        SUM(ft.Amount) - COALESCE(SUM(sf.TotalPaid), 0)      AS TotalOwing,
-        COUNT(CASE WHEN sf.AmountLeft > 0 OR sf.AmountLeft IS NULL THEN 1 END) 
-                                                             AS OwingStudentsCount
-    FROM SchoolManagement.FeeTypes ft
-    INNER JOIN SchoolManagement.Students s 
-        ON s.ClassID = ft.ClassID 
-       AND s.EnableSwitch = 1
-    LEFT JOIN (
-        SELECT FeeTypeID, 
-               SUM(AmountPaid) AS TotalPaid,
-               MAX(AmountLeft) AS AmountLeft
-        FROM SchoolManagement.StudentFees
-        WHERE TermID = @TermID
-        GROUP BY FeeTypeID
-    ) sf ON sf.FeeTypeID = ft.FeeTypeID
-    WHERE (sf.AmountLeft > 0 OR sf.AmountLeft IS NULL)
-    GROUP BY ft.ClassID, ft.FeeTypeName
-    HAVING SUM(ft.Amount) - COALESCE(SUM(sf.TotalPaid), 0) > 0
-    ORDER BY TotalOwing DESC";
+            WITH LatestFee AS (
+                -- One row per student per fee type: the most recently inserted record.
+                -- This handles the case where carry-over creates a new row with the
+                -- accumulated AmountLeft, making older rows stale.
+                SELECT
+                    sf.FeeTypeID,
+                    sf.StudentID,
+                    sf.ClassID,
+                    sf.FeeTypeName,
+                    sf.AmountLeft,
+                    sf.AmountPaid,
+                    sf.PaymentStatus,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY sf.StudentID, sf.FeeTypeID
+                        ORDER BY sf.FeeID DESC          -- latest row wins
+                    ) AS rn
+                FROM SchoolManagement.StudentFees sf
+                WHERE sf.TermID = @TermID
+            )
+            SELECT
+                lf.ClassID                                          AS ClassID,
+                lf.FeeTypeName                                      AS FeeTypeName,
+                COUNT(DISTINCT lf.StudentID)                        AS TotalStudents,
+                SUM(lf.AmountLeft + lf.AmountPaid)                  AS ExpectedAmount,
+                SUM(lf.AmountPaid)                                  AS TotalPaid,
+                SUM(lf.AmountLeft)                                  AS TotalOwing,
+                COUNT(CASE WHEN lf.AmountLeft > 0 THEN 1 END)       AS OwingStudentsCount
+            FROM LatestFee lf
+            WHERE lf.rn = 1                 -- only the latest row per student/fee type
+              AND lf.AmountLeft > 0         -- only rows that actually still owe
+            GROUP BY lf.ClassID, lf.FeeTypeName
+            HAVING SUM(lf.AmountLeft) > 0
+            ORDER BY TotalOwing DESC";
 
                 var results = await conn.QueryAsync<OwingSummary>(sql, new { TermID = termId.Value });
 
-                var response = new
-                {
-                    data = results,
-                    totalOwingAcrossSchool = results.Sum(x => x.TotalOwing)
-                };
+                var list = results.ToList();
 
-                return Ok(response);
+                return Ok(new
+                {
+                    data = list,
+                    totalOwingAcrossSchool = list.Sum(x => x.TotalOwing),
+                    termId = termId.Value
+                });
             }
             catch (Exception ex)
             {
@@ -2089,16 +2092,16 @@ namespace INTEL_API.Controllers
                 using var conn = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
 
                 var sql = @"
-    SELECT TOP 1
-        TermID,
-        Term,
-        IsCurrentTerm,
-        TermEndDate,
-        UserID,
-        RecDateCreated
-    FROM SchoolManagement.SchoolTerm
-    WHERE IsCurrentTerm = 1
-    ORDER BY TermID DESC;";  // latest active term if multiple (shouldn't happen)
+                    SELECT TOP 1
+                        TermID,
+                        Term,
+                        IsCurrentTerm,
+                        TermEndDate,
+                        UserID,
+                        RecDateCreated
+                    FROM SchoolManagement.SchoolTerm
+                    WHERE IsCurrentTerm = 1
+                    ORDER BY TermID DESC;";  // latest active term if multiple (shouldn't happen)
 
                 var term = await conn.QueryFirstOrDefaultAsync<SchoolCurrentTerm>(sql);
 
@@ -2111,8 +2114,8 @@ namespace INTEL_API.Controllers
             }
         }
 
-        [HttpGet("GetSchoolBankSummary")]
-        public async Task<IActionResult> GetDirectorBankSummary()
+        [HttpGet("GetSchoolPaymentSummary")]
+        public async Task<IActionResult> GetSchoolPaymentSummary()
         {
             using var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
 
@@ -2164,5 +2167,209 @@ namespace INTEL_API.Controllers
                 Transactions = transactions ?? new List<object>()
             });
         }
+    
+        [HttpGet("GetSchoolBankSummary")]
+        public async Task<IActionResult> GetDirectorBankSummary()
+        {
+            using var connection = new SqlConnection(
+                _configuration.GetConnectionString("DefaultConnection"));
+
+            await connection.OpenAsync();
+
+            using var multi = await connection.QueryMultipleAsync(
+                "SchoolManagement.sp_GetDirectorBankStatement",
+                commandType: System.Data.CommandType.StoredProcedure);
+
+            var methodBalances = (await multi.ReadAsync()).ToList();
+            var moneyTrail = (await multi.ReadAsync()).ToList();
+            var grandSummary = await multi.ReadFirstOrDefaultAsync();
+            var expenseBreakdown = (await multi.ReadAsync()).ToList();
+
+            return Ok(new
+            {
+                MethodBalances = methodBalances,
+                MoneyTrail = moneyTrail,
+                GrandSummary = grandSummary,
+                ExpenseBreakdown = expenseBreakdown
+            });
+        }
+
+        /*otherfeetype*/
+        [HttpGet("GetOtherFeeType")]
+        public async Task<IActionResult> GetOtherFeeTypeForClass()
+        {
+            try
+            {
+                using var connection = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+
+                await connection.OpenAsync();
+
+                var result = await connection.QueryAsync(
+                    @"SELECT 
+                  FeeTypeID,
+                  FeeTypeName,
+                  Amount,
+                  ClassID
+              FROM SchoolManagement.OtherFees");
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Message = "An error occurred while fetching other fee types.",
+                    Error = ex.Message
+                });
+            }
+        }
+
+        [HttpGet("GetOtherFeesPaid")]
+        public async Task<IActionResult> GetOtherFeesPaid()
+        {
+            try
+            {
+                using var connection = new SqlConnection(_configuration.GetConnectionString("DefaultConnection"));
+                await connection.OpenAsync();
+
+                var result = await connection.QueryAsync(
+                    @"SELECT StudentName, FeeTypeName, ClassID, AmountPaid, PaymentDate, TermID
+              FROM SchoolManagement.PaymentsOtherFees
+              ORDER BY PaymentDate DESC");
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    Message = "An error occurred while fetching data from PaymentsOtherFees.",
+                    Error = ex.Message
+                });
+            }
+        }
+
+
+        [HttpGet("GetStudentsAndFeesByClass")]
+        public async Task<IActionResult> GetStudentsAndFeesByClass([FromQuery] string classId)
+        {
+            if (string.IsNullOrWhiteSpace(classId))
+                return BadRequest(new { message = "classId is required." });
+
+            try
+            {
+                using var connection = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+
+                // Active students in the selected class
+                var studentSql = @"
+            SELECT
+                StudentID,
+                StudentFirstName,
+                StudentLastName,
+                ClassID
+            FROM SchoolManagement.Students
+            WHERE ClassID   = @ClassID
+              AND EnableSwitch = 1
+            ORDER BY StudentFirstName, StudentLastName ASC";
+
+                var students = await connection.QueryAsync<StudentOtherFeeDto>(
+                    studentSql, new { ClassID = classId });
+
+                // Other-fee types defined for this class
+                var feeSql = @"
+            SELECT
+                FeeTypeID,
+                FeeTypeName,
+                Amount,
+                ClassID
+            FROM SchoolManagement.OtherFees
+            WHERE ClassID    = @ClassID
+              AND DeletedBy  IS NULL
+            ORDER BY FeeTypeName";
+
+                var feeTypes = await connection.QueryAsync<OtherFeeDto>(
+                    feeSql, new { ClassID = classId });
+
+                // Current term
+                var termSql = @"
+            SELECT TOP 1 TermID, Term
+            FROM SchoolManagement.SchoolTerm
+            WHERE IsCurrentTerm = 1";
+
+                var currentTerm = await connection.QueryFirstOrDefaultAsync<TermDto>(termSql);
+
+                return Ok(new
+                {
+                    students = students,
+                    feeTypes = feeTypes,
+                    term = currentTerm
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error loading class data.", error = ex.Message });
+            }
+        }
+
+        [HttpPost("PayOtherFee")]
+        public async Task<IActionResult> PayOtherFee([FromBody] OtherFeePaymentRequest request)
+        {
+            if (request == null)
+                return BadRequest(new { message = "Invalid payment data." });
+
+            // Basic validation
+            if (request.StudentID <= 0 || request.FeeTypeID <= 0 || request.TermID <= 0)
+                return BadRequest(new { message = "StudentID, FeeTypeID and TermID are required." });
+
+            if (request.AmountPaid <= 0)
+                return BadRequest(new { message = "AmountPaid must be greater than zero." });
+
+            try
+            {
+                using var connection = new SqlConnection(
+                    _configuration.GetConnectionString("DefaultConnection"));
+
+                var sql = @"
+            INSERT INTO SchoolManagement.PaymentsOtherFees
+                (StudentID, FeeTypeID, StudentName, FeeTypeName,
+                 ClassID, AmountPaid, AmountLeft, PaymentDate,
+                 UserID, PaymentMethod, TermID, PaymentStatus)
+            VALUES
+                (@StudentID, @FeeTypeID, @StudentName, @FeeTypeName,
+                 @ClassID, @AmountPaid, @AmountLeft, @PaymentDate,
+                 @UserID, @PaymentMethod, @TermID, @PaymentStatus)";
+
+                var rows = await connection.ExecuteAsync(sql, new
+                {
+                    request.StudentID,
+                    request.FeeTypeID,
+                    request.StudentName,
+                    request.FeeTypeName,
+                    request.ClassID,
+                    request.AmountPaid,
+                    AmountLeft = 0,  // fully paid in one shot
+                    PaymentDate = request.PaymentDate == default
+                                        ? DateTime.Today
+                                        : request.PaymentDate,
+                    UserID = request.UserID,
+                    PaymentMethod = $"{request.FeeTypeName} Vault",
+                    request.TermID,
+                    PaymentStatus = "Paid"
+                });
+
+                if (rows > 0)
+                    return Ok(new { success = true, message = "Payment saved successfully." });
+
+                return StatusCode(500, new { message = "Payment insert returned no rows." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Payment failed.", error = ex.Message });
+            }
+        }
+
+      
     }
 }

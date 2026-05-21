@@ -29,7 +29,7 @@
         public string Email { get; set; }
 
         /// <summary>
-        /// The payment amount in the smallest currency unit (e.g., Kobo for NGN).
+        /// The payment amount in the smallest currency unit.
         /// </summary>
         public decimal Amount { get; set; }
     }
